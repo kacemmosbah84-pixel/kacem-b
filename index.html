@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>kacem B</title>
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root{--bg:#0b1220;--card:#101a33;--text:#e9efff;--muted:#9fb0d6;--bd:rgba(255,255,255,.10);--pri:rgba(110,168,255,.22);--pri2:rgba(110,168,255,.38);--danger:rgba(255,90,90,.18)}
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Kufi Arabic",Arial}
+    body{margin:0;background:linear-gradient(180deg,#071023,#0b1220);color:var(--text);min-height:100vh}
+    .wrap{max-width:980px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .title{font-weight:900;font-size:22px}
+    .card{background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:16px;padding:14px}
+    .btn{border:1px solid var(--bd);background:rgba(255,255,255,.04);color:var(--text);padding:10px 12px;border-radius:12px;font-weight:800;cursor:pointer}
+    .btn.primary{background:var(--pri);border-color:var(--pri2)}
+    .btn.danger{background:var(--danger);border-color:rgba(255,90,90,.35)}
+    input, select, textarea{width:100%;border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--text);padding:10px 12px;border-radius:12px;outline:none}
+    label{color:#c9d3f3;font-size:13px}
+    .muted{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    @media (max-width:720px){.grid{grid-template-columns:1fr}}
+    .kpi{background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
+    .kpi b{font-size:16px}
+    .alert{margin-top:10px;padding:12px;border-radius:14px;background:rgba(255,90,90,.14);border:1px solid rgba(255,90,90,.30);font-weight:900}
+    .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .chip{border:1px solid var(--bd);background:rgba(255,255,255,.04);padding:8px 12px;border-radius:999px;font-weight:800;cursor:pointer}
+    .chip.active{background:#e9efff;color:#0b1220;border-color:#e9efff}
+    .item{display:flex;gap:10px;justify-content:space-between;align-items:center;border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.16);border-radius:16px;padding:12px}
+    .item .meta{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .item .meta .desc{color:#cfd7ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}
+    .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
+    .modal{max-width:760px;width:100%;background:#0f1930;border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:14px}
+    .modalBack.show{display:flex}
+    .small{font-size:12px}
+    .dangerBorder{border-color:rgba(255,90,90,.45)!important}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="row">
+      <div class="title">kacem B</div>
+      <div class="row" style="justify-content:flex-start">
+        <button id="btnSettings" class="btn">تعديل</button>
+        <button id="btnBackup" class="btn">نسخ احتياطي</button>
+        <button id="btnLogout" class="btn">خروج</button>
+      </div>
+    </div>
+
+    <!-- Login -->
+    <div id="loginCard" class="card" style="display:none">
+      <div class="title" style="font-size:18px;margin-bottom:8px">تسجيل دخول</div>
+      <div class="grid">
+        <div>
+          <label>اسم المستخدم</label>
+          <input id="loginUser" placeholder="اكتب اسم المستخدم">
+        </div>
+        <div>
+          <label>كلمة السر</label>
+          <input id="loginPass" type="password" placeholder="اكتب كلمة السر">
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;justify-content:flex-start">
+        <button id="btnLogin" class="btn primary">دخول</button>
+      </div>
+      <div class="muted small" style="margin-top:10px" id="loginHint"></div>
+    </div>
+
+    <!-- Home -->
+    <div id="homeArea" style="display:none;display:flex;flex-direction:column;gap:12px">
+
+      <div class="card">
+        <div class="row">
+          <b>الشهر</b>
+          <div class="row" style="justify-content:flex-start">
+            <button id="prevMonth" class="btn">◀ السابق</button>
+            <div id="monthLabel" style="font-weight:900"></div>
+            <button id="nextMonth" class="btn">التالي ▶</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <b>الملخص الشهري</b>
+        <div class="grid" style="margin-top:10px">
+          <div class="kpi"><span class="muted">الراتب</span><b id="kpiSalary"></b></div>
+          <div class="kpi"><span class="muted">الماكس</span><b id="kpiMax"></b></div>
+          <div class="kpi"><span class="muted">مجموع المصروفات</span><b id="kpiTotal"></b></div>
+          <div class="kpi" id="kpiRemainSalaryBox"><span class="muted">الباقي (من الراتب)</span><b id="kpiRemainSalary"></b></div>
+          <div class="kpi" id="kpiRemainMaxBox"><span class="muted">الباقي (من الماكس)</span><b id="kpiRemainMax"></b></div>
+          <div class="kpi"><span class="muted">آخر الشهر (ملخّص)</span><b id="kpiEnd"></b><span class="muted small" id="kpiEnd2"></span></div>
+        </div>
+        <div id="stopAlert" class="alert" style="display:none">وقف ✋ وصلت/تجاوزت الحد.</div>
+      </div>
+
+      <div class="card">
+        <b>العمليات</b>
+        <div style="margin-top:10px">
+          <label>بحث</label>
+          <input id="searchBox" placeholder="ابحث بالوصف/المبلغ/التاريخ">
+        </div>
+
+        <div class="chips">
+          <div class="chip active" data-sort="new">الأحدث</div>
+          <div class="chip" data-sort="old">الأقدم</div>
+          <div class="chip" data-sort="high">الأعلى مبلغ</div>
+          <div class="chip" data-sort="low">الأقل مبلغ</div>
+        </div>
+
+        <div class="row" style="margin-top:12px;justify-content:flex-start">
+          <button id="btnAdd" class="btn primary">+ إضافة صرف</button>
+        </div>
+      </div>
+
+      <div id="listArea" style="display:flex;flex-direction:column;gap:10px"></div>
+
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modalBack" class="modalBack">
+    <div class="modal">
+      <div class="row">
+        <b id="modalTitle">إضافة صرف</b>
+        <button id="modalClose" class="btn">إغلاق</button>
+      </div>
+
+      <div class="grid" style="margin-top:10px">
+        <div>
+          <label>التاريخ (YYYY-MM-DD)</label>
+          <input id="fDate" placeholder="2026-03-01">
+        </div>
+        <div>
+          <label>المبلغ (دج)</label>
+          <input id="fAmt" inputmode="numeric" placeholder="مثال: 1200">
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <label>الوصف</label>
+        <input id="fDesc" placeholder="مثال: قهوة / بنزين / أكل...">
+      </div>
+
+      <div class="row" style="margin-top:12px;justify-content:flex-start">
+        <button id="modalSave" class="btn primary">حفظ</button>
+        <button id="modalCancel" class="btn">إلغاء</button>
+      </div>
+      <div class="muted small" style="margin-top:10px">بعد كل إضافة يطلع الباقي تلقائيًا، وإذا وصلت الماكس يطلع “وقف”.</div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsBack" class="modalBack">
+    <div class="modal">
+      <div class="row">
+        <b>تعديل</b>
+        <button id="settingsClose" class="btn">إغلاق</button>
+      </div>
+
+      <div class="card" style="margin-top:10px">
+        <b>الحساب</b>
+        <div class="grid" style="margin-top:10px">
+          <div>
+            <label>اسم المستخدم</label>
+            <input id="sUser">
+          </div>
+          <div>
+            <label>كلمة السر</label>
+            <input id="sPass" type="password">
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:10px">
+        <b>الراتب والماكس</b>
+        <div class="grid" style="margin-top:10px">
+          <div>
+            <label>الراتب الشهري (دج)</label>
+            <input id="sSalary" inputmode="numeric">
+          </div>
+          <div>
+            <label>حد الصرف الشهري (الماكس) (دج)</label>
+            <input id="sMax" inputmode="numeric">
+          </div>
+        </div>
+        <div class="muted small" style="margin-top:8px">تقدر تغيّر الراتب لو ترقّى + تغيّر الماكس بأي وقت.</div>
+      </div>
+
+      <div class="row" style="margin-top:12px;justify-content:flex-start">
+        <button id="settingsSave" class="btn primary">حفظ</button>
+        <button id="settingsReset" class="btn danger">إعادة ضبط</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backup Modal -->
+  <div id="backupBack" class="modalBack">
+    <div class="modal">
+      <div class="row">
+        <b>نسخ احتياطي</b>
+        <button id="backupClose" class="btn">إغلاق</button>
+      </div>
+
+      <div class="card" style="margin-top:10px">
+        <b>1) نص JSON</b>
+        <div class="muted small">انسخه واحفظه… وللاسترجاع الصقه واضغط “استيراد”.</div>
+        <textarea id="backupText" rows="10" style="margin-top:10px"></textarea>
+        <div class="row" style="margin-top:10px;justify-content:flex-start">
+          <button id="backupRefresh" class="btn">تحديث النص</button>
+          <button id="backupImport" class="btn primary">استيراد</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:10px">
+        <b>2) ملف CSV</b>
+        <div class="muted small">ينزّل ملف CSV على جهازك.</div>
+        <div class="row" style="margin-top:10px;justify-content:flex-start">
+          <button id="backupCSV" class="btn primary">تصدير CSV</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // PWA: register service worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(()=>{});
+    }
+  </script>
+</body>
+</html>
