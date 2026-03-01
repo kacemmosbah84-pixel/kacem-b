@@ -1,5 +1,36 @@
-const STORAGE_KEY = "kacem_b_pwa_v1";
+// app.js (Firebase Username+Password + Cloud Sync)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
+/** 1) حط الكونفيق حقك هنا */
+const firebaseConfig = {
+  apiKey: "AIzaSyAY0UUup62U68r2Hv1mS6ffX4ZjSmvcOqQ",
+  authDomain: "kacem-b.firebaseapp.com",
+  projectId: "kacem-b",
+  storageBucket: "kacem-b.firebasestorage.app",
+  messagingSenderId: "25625777376",
+  appId: "1:25625777376:web:3fa483d33191faaeb86c85",
+  measurementId: "G-WM1LNSFQ2J"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ---------- Helpers ----------
 const pad2 = (n) => String(n).padStart(2, "0");
 const now = () => new Date();
 const ym = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
@@ -18,53 +49,15 @@ const toInt = (s) => {
   const n = Number(String(s ?? "").replace(/[^\d]/g, ""));
   return Number.isFinite(n) ? n : 0;
 };
-
 const money = (n) => `${(n || 0).toLocaleString("ar-DZ")} دج`;
-
-const defaultState = {
-  version: 1,
-  auth: { username: "kacem", password: "1234" },
-  settings: { salary: 47000, maxSpend: 47000, currency: "دج", integersOnly: true },
-  expenses: [],
-};
+const uid = () => Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
 
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+const setVisible = (el, yes) => (el.style.display = yes ? "" : "none");
 
-function uid() {
-  return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
-}
-
-function load() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return structuredClone(defaultState);
-    const parsed = JSON.parse(raw);
-    return {
-      ...defaultState,
-      ...parsed,
-      auth: { ...defaultState.auth, ...(parsed.auth || {}) },
-      settings: { ...defaultState.settings, ...(parsed.settings || {}) },
-      expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
-    };
-  } catch {
-    return structuredClone(defaultState);
-  }
-}
-
-function save(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-let state = load();
-let session = { loggedIn: false };
-let monthKey = ym(now());
-let sortMode = "new";
-let query = "";
-let editId = null;
-
-function setVisible(el, yes) {
-  el.style.display = yes ? "" : "none";
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
 
 function openModal(backId) { $(backId).classList.add("show"); }
@@ -75,9 +68,7 @@ function requestNotify() {
   if (Notification.permission === "default") Notification.requestPermission().catch(()=>{});
 }
 function notifyStop(msg) {
-  // داخل الصفحة
   alert(msg);
-  // إشعار (إذا مسموح)
   try {
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification("kacem B", { body: msg });
@@ -85,6 +76,61 @@ function notifyStop(msg) {
   } catch {}
 }
 
+// ---------- State (per-user in Firestore) ----------
+const defaultState = {
+  version: 2,
+  settings: { salary: 47000, maxSpend: 47000, currency: "دج", integersOnly: true },
+  expenses: [],
+};
+
+let state = structuredClone(defaultState);
+let session = { loggedIn: false, user: null };
+let monthKey = ym(now());
+let sortMode = "new";
+let query = "";
+let editId = null;
+
+let saveTimer = null;
+function debounceSaveCloud() {
+  if (!session.user) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveCloud, 600);
+}
+
+function usernameToEmail(username) {
+  const u = (username || "").trim().toLowerCase();
+  // السماح بحروف/أرقام/._- فقط
+  if (!/^[a-z0-9._-]{3,20}$/.test(u)) return null;
+  return `${u}@kacem-b.local`;
+}
+
+async function loadCloud() {
+  const user = session.user;
+  if (!user) return;
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const data = snap.data();
+    state = {
+      ...defaultState,
+      ...data,
+      settings: { ...defaultState.settings, ...(data.settings || {}) },
+      expenses: Array.isArray(data.expenses) ? data.expenses : [],
+    };
+  } else {
+    state = structuredClone(defaultState);
+    await setDoc(ref, { ...state, createdAt: serverTimestamp() }, { merge: true });
+  }
+}
+
+async function saveCloud() {
+  const user = session.user;
+  if (!user) return;
+  const ref = doc(db, "users", user.uid);
+  await setDoc(ref, { ...state, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+// ---------- UI ----------
 function applyLoginUI() {
   setVisible($("loginCard"), !session.loggedIn);
   setVisible($("homeArea"), session.loggedIn);
@@ -92,7 +138,20 @@ function applyLoginUI() {
   setVisible($("btnBackup"), session.loggedIn);
   setVisible($("btnLogout"), session.loggedIn);
 
-  $("loginHint").textContent = `افتراضيًا: user = ${state.auth.username} ، pass = ${state.auth.password}`;
+  // نغيّر النص تحت: ما عاد فيه حساب افتراضي
+  const hint = $("loginHint");
+  if (hint) hint.textContent = "سجّل دخول أو أنشئ حساب جديد. (اسم المستخدم 3-20: حروف/أرقام/._-)";
+}
+
+// نضيف زر “إنشاء حساب” داخل بطاقة الدخول
+function ensureSignupButton() {
+  if ($("btnSignup")) return;
+  const btn = document.createElement("button");
+  btn.id = "btnSignup";
+  btn.className = "btn";
+  btn.textContent = "إنشاء حساب";
+  $("btnLogin").parentElement.appendChild(btn);
+  btn.onclick = signup;
 }
 
 function monthExpenses() {
@@ -141,20 +200,16 @@ function render() {
   $("kpiRemainSalary").textContent = money(sums.remainingSalary);
   $("kpiRemainMax").textContent = money(sums.remainingMax);
 
-  // آخر الشهر (ملخص)
   $("kpiEnd").textContent = `المجموع: ${money(sums.total)}`;
   $("kpiEnd2").textContent = `الباقي: ${money(sums.remainingSalary)} | (من الماكس): ${money(sums.remainingMax)}`;
 
-  // danger borders
   $("kpiRemainSalaryBox").classList.toggle("dangerBorder", sums.remainingSalary <= 0);
   $("kpiRemainMaxBox").classList.toggle("dangerBorder", sums.remainingMax <= 0);
 
   const stop = (sums.maxSpend > 0 && sums.total >= sums.maxSpend) || (sums.salary > 0 && sums.total >= sums.salary);
   setVisible($("stopAlert"), stop);
 
-  // تنبيه "وقف"
   if (stop) {
-    // مرة واحدة لكل شهر/إجمالي
     const key = `notified_${monthKey}_${sums.total}`;
     if (!session[key]) {
       session[key] = true;
@@ -163,7 +218,6 @@ function render() {
     }
   }
 
-  // list
   const area = $("listArea");
   area.innerHTML = "";
   if (list.length === 0) {
@@ -190,10 +244,6 @@ function render() {
     `;
     area.appendChild(item);
   }
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
 
 function setMonth(delta) {
@@ -233,89 +283,65 @@ function saveExpense() {
 
   const item = { id: editId || uid(), dateYMD: ymd(d), amount, desc };
 
-  if (editId) {
-    state.expenses = state.expenses.map(x => x.id === editId ? item : x);
-  } else {
-    state.expenses = [item, ...state.expenses];
-  }
-  save(state);
+  if (editId) state.expenses = state.expenses.map(x => x.id === editId ? item : x);
+  else state.expenses = [item, ...state.expenses];
+
   closeModal("modalBack");
   render();
+  debounceSaveCloud();
 }
 
 function deleteExpense(id) {
   if (!confirm("متأكد تحذف العملية؟")) return;
   state.expenses = state.expenses.filter(x => x.id !== id);
-  save(state);
   render();
+  debounceSaveCloud();
 }
 
 function openSettings() {
-  $("sUser").value = state.auth.username || "";
-  $("sPass").value = state.auth.password || "";
+  $("sUser").value = ""; // ما عاد نغير يوزر/باس هنا (تتبع للحساب)
+  $("sPass").value = "";
   $("sSalary").value = String(state.settings.salary || 0);
   $("sMax").value = String(state.settings.maxSpend || 0);
   openModal("settingsBack");
 }
 
 function saveSettings() {
-  const username = ($("sUser").value || "").trim();
-  const password = $("sPass").value || "";
   const salary = toInt($("sSalary").value);
   const maxSpend = toInt($("sMax").value);
-
-  if (!username) return alert("اسم المستخدم ما ينفع فاضي");
-  if (!password) return alert("كلمة السر ما تنفع فاضية");
   if (salary <= 0) return alert("الراتب لازم يكون أكبر من 0");
   if (maxSpend <= 0) return alert("الماكس لازم يكون أكبر من 0");
 
-  state.auth = { username, password };
   state.settings.salary = salary;
   state.settings.maxSpend = maxSpend;
 
-  save(state);
   closeModal("settingsBack");
   alert("تم حفظ الإعدادات.");
   render();
+  debounceSaveCloud();
 }
 
-function resetAll() {
-  if (!confirm("ترجع كل شيء افتراضي؟")) return;
-  state = structuredClone(defaultState);
-  save(state);
-  closeModal("settingsBack");
-  session.loggedIn = false;
-  render();
-}
-
+// ---------- Backup ----------
 function openBackup() {
   $("backupText").value = JSON.stringify(state, null, 2);
   openModal("backupBack");
 }
-
-function refreshBackupText() {
-  $("backupText").value = JSON.stringify(state, null, 2);
-}
-
+function refreshBackupText() { $("backupText").value = JSON.stringify(state, null, 2); }
 function importBackupText() {
   try {
     const parsed = JSON.parse($("backupText").value || "");
     state = {
       ...defaultState,
       ...parsed,
-      auth: { ...defaultState.auth, ...(parsed.auth || {}) },
       settings: { ...defaultState.settings, ...(parsed.settings || {}) },
       expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
     };
-    save(state);
     alert("تم الاستيراد.");
     closeModal("backupBack");
     render();
-  } catch {
-    alert("النص مو JSON صحيح.");
-  }
+    debounceSaveCloud();
+  } catch { alert("النص مو JSON صحيح."); }
 }
-
 function exportCSV() {
   const rows = [
     ["id","date","amount","desc"].join(","),
@@ -325,35 +351,53 @@ function exportCSV() {
     })
   ];
   const csv = rows.join("\n");
-  downloadText(csv, `kacem_b_expenses_${Date.now()}.csv`, "text/csv;charset=utf-8");
-}
-
-function downloadText(text, filename, type) {
-  const blob = new Blob([text], { type: type || "text/plain;charset=utf-8" });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename;
+  a.download = `kacem_b_expenses_${Date.now()}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
 
-// events
-$("btnLogin").onclick = () => {
-  const u = ($("loginUser").value || "").trim();
-  const p = $("loginPass").value || "";
-  if (u === state.auth.username && p === state.auth.password) {
-    session.loggedIn = true;
-    $("loginPass").value = "";
-    render();
-  } else {
-    alert("اسم المستخدم أو كلمة السر غلط.");
-  }
-};
+// ---------- Auth (username + password) ----------
+async function login() {
+  const username = ($("loginUser").value || "").trim();
+  const password = $("loginPass").value || "";
+  const email = usernameToEmail(username);
+  if (!email) return alert("اسم المستخدم لازم يكون 3-20 (حروف/أرقام/._-)");
+  if (!password || password.length < 6) return alert("كلمة السر لازم تكون 6 أحرف أو أكثر");
 
-$("btnLogout").onclick = () => { session.loggedIn = false; render(); };
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    alert("فشل الدخول. تأكد من اسم المستخدم وكلمة السر.");
+  }
+}
+
+async function signup() {
+  const username = ($("loginUser").value || "").trim();
+  const password = $("loginPass").value || "";
+  const email = usernameToEmail(username);
+  if (!email) return alert("اسم المستخدم لازم يكون 3-20 (حروف/أرقام/._-)");
+  if (!password || password.length < 6) return alert("كلمة السر لازم تكون 6 أحرف أو أكثر");
+
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    // نحفظ “username” داخل ملف المستخدم (للعرض فقط)
+    await setDoc(doc(db, "users", cred.user.uid), { username: username.toLowerCase(), ...defaultState, createdAt: serverTimestamp() }, { merge: true });
+    alert("تم إنشاء الحساب ✅");
+  } catch (e) {
+    // غالباً الاسم مستخدم (الإيميل موجود)
+    alert("ما قدرنا نسوي الحساب. غالباً اسم المستخدم مستخدم أو فيه مشكلة.");
+  }
+}
+
+// ---------- Events ----------
+$("btnLogin").onclick = login;
+$("btnLogout").onclick = () => signOut(auth);
 
 $("btnAdd").onclick = openAdd;
 
@@ -364,7 +408,6 @@ $("modalSave").onclick = saveExpense;
 $("btnSettings").onclick = openSettings;
 $("settingsClose").onclick = () => closeModal("settingsBack");
 $("settingsSave").onclick = saveSettings;
-$("settingsReset").onclick = resetAll;
 
 $("btnBackup").onclick = openBackup;
 $("backupClose").onclick = () => closeModal("backupBack");
@@ -386,7 +429,6 @@ $$(".chip").forEach(ch => {
   };
 });
 
-// delegate list actions
 $("listArea").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-act]");
   if (!btn) return;
@@ -396,9 +438,23 @@ $("listArea").addEventListener("click", (e) => {
   if (act === "del") deleteExpense(id);
 });
 
-// init
 (function init(){
-  // start at current month
+  ensureSignupButton();
   monthKey = ym(now());
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      session.user = user;
+      session.loggedIn = true;
+      await loadCloud();
+      render();
+    } else {
+      session.user = null;
+      session.loggedIn = false;
+      state = structuredClone(defaultState);
+      render();
+    }
+  });
+
   render();
 })();
