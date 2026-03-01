@@ -28,6 +28,31 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+// ===== Firebase Login =====
+const loginBtn = document.getElementById("btnLogin");
+
+loginBtn.addEventListener("click", async () => {
+  const email = document.getElementById("loginUser").value.trim();
+  const pass = document.getElementById("loginPass").value.trim();
+
+  if (!email || !pass) {
+    alert("اكتب الإيميل وكلمة السر");
+    return;
+  }
+
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    alert("تم تسجيل الدخول ✅");
+  } catch (error) {
+    alert("الحساب غير موجود، سيتم إنشاء حساب جديد");
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+      alert("تم إنشاء الحساب وتسجيل الدخول ✅");
+    } catch (err) {
+      alert("خطأ: " + err.message);
+    }
+  }
+});
 const db = getFirestore(app);
 
 // ---------- Helpers ----------
