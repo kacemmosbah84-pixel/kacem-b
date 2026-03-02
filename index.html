@@ -6,6 +6,7 @@
   <title>kacem B</title>
   <meta name="theme-color" content="#0b1220" />
   <link rel="manifest" href="manifest.json">
+
   <style>
     :root{--bg:#0b1220;--card:#101a33;--text:#e9efff;--muted:#9fb0d6;--bd:rgba(255,255,255,.10);--pri:rgba(110,168,255,.22);--pri2:rgba(110,168,255,.38);--danger:rgba(255,90,90,.18)}
     *{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Kufi Arabic",Arial}
@@ -38,6 +39,7 @@
     .dangerBorder{border-color:rgba(255,90,90,.45)!important}
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="row">
@@ -51,21 +53,24 @@
 
     <!-- Login -->
     <div id="loginCard" class="card" style="display:none">
-      <div class="title" style="font-size:18px;margin-bottom:8px">تسجيل دخول</div>
+      <div class="title" style="font-size:18px;margin-bottom:8px">تسجيل دخول / إنشاء حساب</div>
+
       <div class="grid">
         <div>
-          <label>اسم المستخدم</label>
-          <input id="loginUser" placeholder="اكتب اسم المستخدم">
+          <label>الإيميل</label>
+          <input id="loginUser" placeholder="مثال: you@email.com">
         </div>
         <div>
           <label>كلمة السر</label>
           <input id="loginPass" type="password" placeholder="اكتب كلمة السر">
         </div>
       </div>
+
       <div class="row" style="margin-top:10px;justify-content:center;gap:10px;">
-  <button id="btnLogin" class="btn primary">دخول</button>
-  <button id="btnSignup" class="btn">إنشاء حساب</button>
-</div>
+        <button id="btnLogin" class="btn primary">دخول</button>
+        <button id="btnSignup" class="btn">إنشاء حساب</button>
+      </div>
+
       <div class="muted small" style="margin-top:10px" id="loginHint"></div>
     </div>
 
@@ -160,20 +165,6 @@
       </div>
 
       <div class="card" style="margin-top:10px">
-        <b>الحساب</b>
-        <div class="grid" style="margin-top:10px">
-          <div>
-            <label>اسم المستخدم</label>
-            <input id="sUser">
-          </div>
-          <div>
-            <label>كلمة السر</label>
-            <input id="sPass" type="password">
-          </div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:10px">
         <b>الراتب والماكس</b>
         <div class="grid" style="margin-top:10px">
           <div>
@@ -185,7 +176,7 @@
             <input id="sMax" inputmode="numeric">
           </div>
         </div>
-        <div class="muted small" style="margin-top:8px">تقدر تغيّر الراتب لو ترقّى + تغيّر الماكس بأي وقت.</div>
+        <div class="muted small" style="margin-top:8px">تقدر تغيّر الراتب والماكس بأي وقت.</div>
       </div>
 
       <div class="row" style="margin-top:12px;justify-content:flex-start">
@@ -223,11 +214,11 @@
     </div>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <!-- مهم: زدنا v=3 عشان ما يعلق كاش -->
+  <script type="module" src="app.js?v=3"></script>
   <script>
-    // PWA: register service worker
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./sw.js").catch(()=>{});
+      navigator.serviceWorker.register("./sw.js").then((reg)=>reg.update()).catch(()=>{});
     }
   </script>
 </body>
