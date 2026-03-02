@@ -1,4 +1,3 @@
-// ===================== Firebase Config (بدّلها بقيم مشروعك) =====================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getAuth,
@@ -15,15 +14,15 @@ import {
   getDoc,
   collection,
   addDoc,
-  updateDoc,
   deleteDoc,
   onSnapshot,
   query,
   orderBy,
   serverTimestamp,
-  getDocs,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
+/* ================= Firebase Config ================= */
 const firebaseConfig = {
   apiKey: "AIzaSyAY0UUup62U68r2Hv1mS6ffX4ZjSmvcOqQ",
   authDomain: "kacem-b.firebaseapp.com",
@@ -38,70 +37,58 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ===================== Helpers =====================
+/* ================= Helpers ================= */
 const $ = (id) => document.getElementById(id);
-
-function toast(msg) {
-  alert(msg);
-}
-
-function normalizeUsername(u) {
-  return (u || "").trim().toLowerCase();
-}
-
-// نحول اسم المستخدم لإيميل داخلي
-function usernameToEmail(username) {
-  const u = normalizeUsername(username);
-  if (!u) return "";
-  if (u.includes("@")) return u; // لو كتب إيميل فعلي
-  return `${u}@kacem.local`;
-}
-
-function num(v) {
+const num = (v) => {
   const n = Number(String(v ?? "").replace(/[^\d.]/g, ""));
   return Number.isFinite(n) ? n : 0;
+};
+const pad2 = (n) => String(n).padStart(2, "0");
+const ymd = (d) => ${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())};
+const ymKey = (d) => ${d.getFullYear()}-${pad2(d.getMonth()+1)};
+const monthFromDateStr = (s) => String(s || "").slice(0,7);
+
+function toEmail(userOrEmail) {
+  const u = String(userOrEmail || "").trim().toLowerCase();
+  if (!u) return "";
+  if (u.includes("@")) return u;
+  return ${u}@kacem.local; // دعم "اسم مستخدم" بدون @
 }
 
-function todayYMD() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+function monthLabel(d){
+  const names = ["يناير","فبراير","مارس","أبريل","ماي","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+  return ${names[d.getMonth()]} ${d.getFullYear()};
 }
 
-function monthKeyFromYMD(ymd) {
-  // "YYYY-MM"
-  return String(ymd || "").slice(0, 7);
-}
-
-function downloadText(filename, text) {
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function downloadCSV(filename, rows) {
-  const esc = (s) => `"${String(s ?? "").replaceAll('"', '""')}"`;
-  const csv = rows.map(r => r.map(esc).join(",")).join("\n");
-  downloadText(filename, csv);
-}
-
-// ===================== UI refs =====================
+/* ================= UI ================= */
 const loginCard = $("loginCard");
-const homeArea  = $("homeArea");
-
+const homeArea = $("homeArea");
 const loginUser = $("loginUser");
 const loginPass = $("loginPass");
+const btnLogin = $("btnLogin");
+const btnSignup = $("btnSignup");
 const loginHint = $("loginHint");
 
-const btnLogin  = $("btnLogin");
-const btnSignup = $("btnSignup");
 const btnLogout = $("btnLogout");
+const btnSettings = $("btnSettings");
+const btnBackup = $("btnBackup");
+const btnInstall = $("btnInstall");
+
+const whoAmI = $("whoAmI");
+const monthLabelEl = $("monthLabel");
+
+const kpiSalary = $("kpiSalary");
+const kpiMax = $("kpiMax");
+const kpiTotal = $("kpiTotal");
+const kpiRemain = $("kpiRemain");
+const nearAlert = $("nearAlert");
+const stopAlert = $("stopAlert");
+
+const prevMonth = $("prevMonth");
+const nextMonth = $("nextMonth");
+const todayBtn = $("todayBtn");
+const calGrid = $("calGrid");
+const dayHint = $("dayHint");
 
 const btnAdd = $("btnAdd");
 const modalBack = $("modalBack");
@@ -109,21 +96,20 @@ const modalClose = $("modalClose");
 const modalCancel = $("modalCancel");
 const modalSave = $("modalSave");
 const fDate = $("fDate");
-const fAmt  = $("fAmt");
+const fAmt = $("fAmt");
 const fDesc = $("fDesc");
+const fCat = $("fCat");
 
-const whoAmI = $("whoAmI");
-const listArea = $("listArea");
 const searchBox = $("searchBox");
+const filterCat = $("filterCat");
+const listArea = $("listArea");
 
-const btnSettings = $("btnSettings");
 const settingsBack = $("settingsBack");
 const settingsClose = $("settingsClose");
 const settingsSave = $("settingsSave");
 const sSalary = $("sSalary");
 const sMax = $("sMax");
 
-const btnBackup = $("btnBackup");
 const backupBack = $("backupBack");
 const backupClose = $("backupClose");
 const backupText = $("backupText");
@@ -131,357 +117,522 @@ const backupRefresh = $("backupRefresh");
 const backupImport = $("backupImport");
 const backupCSV = $("backupCSV");
 
-const kpiSalary = $("kpiSalary");
-const kpiMax = $("kpiMax");
-const kpiTotal = $("kpiTotal");
-const kpiRemain = $("kpiRemain");
+/* ================= PWA Install Button ================= */
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  btnInstall.style.display = "inline-block";
+});
+btnInstall.addEventListener("click", async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  btnInstall.style.display = "none";
+});
 
-// ===================== State =====================
+/* ================= State ================= */
 let currentUser = null;
-let unsubTx = null;
-let cachedTx = [];
 let settings = { salary: 0, max: 0 };
+let txAll = [];           // كل العمليات
+let currentMonth = new Date();  // الشهر المعروض
+let activeDay = "";       // YYYY-MM-DD (فلتر يوم)
+let unsubTx = null;
 
-// ===================== Show/Hide =====================
-function showLogin() {
+/* ================= Firestore paths ================= */
+const userDoc = (uid) => doc(db, "users", uid);
+const settingsDoc = (uid) => doc(db, "users", uid, "settings", "main");
+const txCol = (uid) => collection(db, "users", uid, "tx");
+
+/* ================= UI helpers ================= */
+function showLogin(){
   loginCard.style.display = "block";
   homeArea.style.display = "none";
-
+  btnLogout.style.display = "none";
   btnSettings.style.display = "none";
   btnBackup.style.display = "none";
-  btnLogout.style.display = "none";
 }
-
-function showHome() {
+function showHome(){
   loginCard.style.display = "none";
   homeArea.style.display = "flex";
-
+  btnLogout.style.display = "inline-block";
   btnSettings.style.display = "inline-block";
   btnBackup.style.display = "inline-block";
-  btnLogout.style.display = "inline-block";
 }
+function setHint(t){ loginHint.textContent = t || ""; }
 
-// ===================== Firestore paths =====================
-function userRoot(uid) {
-  return doc(db, "users", uid);
-}
-function settingsDoc(uid) {
-  return doc(db, "users", uid, "settings", "main");
-}
-function txCol(uid) {
-  return collection(db, "users", uid, "tx");
-}
+function open(back){ back.classList.add("show"); }
+function close(back){ back.classList.remove("show"); }
 
-// ===================== Settings load/save =====================
-async function loadSettings(uid) {
+/* ================= Settings ================= */
+async function loadSettings(uid){
   const ref = settingsDoc(uid);
   const snap = await getDoc(ref);
 
-  if (!snap.exists()) {
-    // defaults
+  if (!snap.exists()){
+    await setDoc(ref, { salary: 0, max: 0 }, { merge:true });
     settings = { salary: 0, max: 0 };
-    await setDoc(ref, settings, { merge: true });
   } else {
-    const data = snap.data() || {};
-    settings = {
-      salary: num(data.salary),
-      max: num(data.max),
-    };
+    const d = snap.data() || {};
+    settings = { salary: num(d.salary), max: num(d.max) };
   }
 
-  sSalary.value = settings.salary || "";
-  sMax.value = settings.max || "";
-  renderKPIs();
+  sSalary.value = settings.salary ? String(settings.salary) : "";
+  sMax.value = settings.max ? String(settings.max) : "";
+  renderAll();
 }
 
-async function saveSettings(uid) {
-  const salary = num(sSalary.value);
-  const max = num(sMax.value);
-
-  settings = { salary, max };
-  await setDoc(settingsDoc(uid), settings, { merge: true });
-
-  renderKPIs();
-  toast("تم حفظ الإعدادات ✅");
+async function saveSettings(uid){
+  settings = { salary: num(sSalary.value), max: num(sMax.value) };
+  await setDoc(settingsDoc(uid), settings, { merge:true });
+  renderAll();
+  alert("تم حفظ الإعدادات ✅");
 }
 
-// ===================== Transactions =====================
-function startTxListener(uid) {
+/* ================= Transactions listener ================= */
+function startTx(uid){
   if (unsubTx) unsubTx();
 
   const qy = query(txCol(uid), orderBy("createdAt", "desc"));
   unsubTx = onSnapshot(qy, (snap) => {
-    cachedTx = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderList();
-    renderKPIs();
+    txAll = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderAll();
   });
 }
 
-async function addTransaction(uid, { date, amt, desc }) {
+async function addTx(uid, {date, amt, desc, cat}){
   await addDoc(txCol(uid), {
-    date,                 // "YYYY-MM-DD"
-    month: monthKeyFromYMD(date), // "YYYY-MM"
+    date,
+    month: monthFromDateStr(date),
     amt: num(amt),
     desc: String(desc || "").trim(),
-    createdAt: serverTimestamp(),
+    cat: String(cat || "أخرى"),
+    createdAt: serverTimestamp()
   });
 }
 
-async function importBackup(uid, payload) {
-  // payload: { settings, tx[] }
-  if (payload?.settings) {
-    await setDoc(settingsDoc(uid), {
-      salary: num(payload.settings.salary),
-      max: num(payload.settings.max),
-    }, { merge: true });
-  }
-
-  const tx = Array.isArray(payload?.tx) ? payload.tx : [];
-  // نضيفها من جديد (ممكن يصير تكرار لو كررت الاستيراد)
-  for (const t of tx) {
-    const date = String(t.date || "").slice(0, 10) || todayYMD();
-    await addDoc(txCol(uid), {
-      date,
-      month: monthKeyFromYMD(date),
-      amt: num(t.amt),
-      desc: String(t.desc || "").trim(),
-      createdAt: serverTimestamp(),
-    });
-  }
+async function delTx(uid, id){
+  await deleteDoc(doc(db, "users", uid, "tx", id));
 }
 
-// ===================== Render =====================
-function renderList() {
+/* ================= Filtering ================= */
+function txForCurrentMonth(){
+  const m = ymKey(currentMonth);
+  return txAll
+    .map(t => ({
+      id: t.id,
+      date: t.date || "",
+      month: t.month || monthFromDateStr(t.date),
+      amt: num(t.amt),
+      desc: t.desc || "",
+      cat: t.cat || "أخرى",
+    }))
+    .filter(t => t.month === m);
+}
+
+function applyFilters(list){
   const q = String(searchBox.value || "").trim().toLowerCase();
-  const filtered = cachedTx.filter(t => {
+  const c = String(filterCat.value || "");
+
+  return list.filter(t => {
+    if (activeDay && t.date !== activeDay) return false;
+    if (c && t.cat !== c) return false;
     if (!q) return true;
     return (
-      String(t.desc || "").toLowerCase().includes(q) ||
-      String(t.amt ?? "").includes(q) ||
-      String(t.date || "").includes(q)
+      t.date.toLowerCase().includes(q) ||
+      t.desc.toLowerCase().includes(q) ||
+      String(t.amt).includes(q) ||
+      t.cat.toLowerCase().includes(q)
     );
   });
+}
 
+/* ================= KPI + Alerts ================= */
+function renderKPI(monthList){
+  const total = monthList.reduce((s,t)=>s+t.amt,0);
+  const max = settings.max || 0;
+  const remain = max - total;
+
+  kpiSalary.textContent = String(settings.salary || 0);
+  kpiMax.textContent = String(max || 0);
+  kpiTotal.textContent = String(total);
+  kpiRemain.textContent = String(remain);
+
+  // alerts
+  nearAlert.style.display = "none";
+  stopAlert.style.display = "none";
+
+  if (max > 0){
+    const ratio = total / max;
+    if (ratio >= 1) {
+      stopAlert.style.display = "block";
+    } else if (ratio >= 0.8) {
+      nearAlert.style.display = "block";
+    }
+  }
+}
+
+/* ================= Calendar ================= */
+function buildCalendar(monthList){
+  calGrid.innerHTML = "";
+
+  const y = currentMonth.getFullYear();
+  const m = currentMonth.getMonth();
+
+  const first = new Date(y, m, 1);
+  const last = new Date(y, m+1, 0);
+
+  // نرتب الأسبوع من السبت (0) إلى الجمعة (6)
+  // JS getDay: الأحد=0 ... السبت=6
+  // نبي: السبت=0 ... الجمعة=6
+  const toSatFirst = (jsDay) => (jsDay + 1) % 7;
+
+  const startPad = toSatFirst(first.getDay());
+  const daysInMonth = last.getDate();
+
+  // totals per day
+  const byDay = new Map();
+  for (const t of monthList){
+    byDay.set(t.date, (byDay.get(t.date) || 0) + t.amt);
+  }
+
+  const totalCells = startPad + daysInMonth;
+  const tailPad = (7 - (totalCells % 7)) % 7;
+  const cells = totalCells + tailPad;
+
+  const today = ymd(new Date());
+  const currentMKey = ymKey(currentMonth);
+
+  // اضافة خلايا قبل الشهر
+  for (let i=0;i<cells;i++){
+    const cell = document.createElement("div");
+    cell.className = "calCell";
+
+    const dayNum = i - startPad + 1;
+
+    let dateStr = "";
+    let isThisMonth = dayNum >= 1 && dayNum <= daysInMonth;
+
+    if (!isThisMonth){
+      cell.classList.add("mutedCell");
+      cell.innerHTML = <div class="calDay"> </div><div class="calSum muted small"> </div>;
+      calGrid.appendChild(cell);
+      continue;
+    }
+
+    dateStr = ${y}-${pad2(m+1)}-${pad2(dayNum)};
+    const sum = byDay.get(dateStr) || 0;
+
+    if (dateStr === activeDay) cell.classList.add("active");
+    if (!activeDay && dateStr === today && monthFromDateStr(today) === currentMKey) cell.classList.add("active");
+
+    cell.innerHTML = `
+      <div class="calDay">${dayNum}</div>
+      <div class="calSum">${sum ? (sum + " دج") : "—"}</div>
+    `;
+
+    cell.addEventListener("click", () => {
+      // toggle day filter
+      if (activeDay === dateStr) {
+        activeDay = "";
+        dayHint.textContent = "";
+      } else {
+        activeDay = dateStr;
+        dayHint.textContent = فلتر اليوم: ${dateStr} (اضغط مرة ثانية لإلغاء);
+      }
+      renderAll();
+    });
+
+    calGrid.appendChild(cell);
+  }
+}
+
+/* ================= Charts ================= */
+let chartCat = null;
+let chartDays = null;
+
+function destroyCharts(){
+  try { chartCat?.destroy(); } catch {}
+  try { chartDays?.destroy(); } catch {}
+  chartCat = null;
+  chartDays = null;
+}
+
+function renderCharts(monthList){
+  if (!window.Chart) return;
+
+  // by category
+  const catMap = new Map();
+  for (const t of monthList){
+    catMap.set(t.cat, (catMap.get(t.cat) || 0) + t.amt);
+  }
+  const catLabels = Array.from(catMap.keys());
+  const catValues = Array.from(catMap.values());
+
+  // by day
+  const dayMap = new Map();
+  for (const t of monthList){
+    dayMap.set(t.date, (dayMap.get(t.date) || 0) + t.amt);
+  }
+  const dayLabels = Array.from(dayMap.keys()).sort((a,b)=>a.localeCompare(b));
+  const dayValues = dayLabels.map(d => dayMap.get(d));
+
+  destroyCharts();
+
+  const ctx1 = $("chartCat");
+  const ctx2 = $("chartDays");
+
+  chartCat = new window.Chart(ctx1, {
+    type: "doughnut",
+    data: { labels: catLabels, datasets: [{ data: catValues }] },
+    options: { responsive:true, plugins:{ legend:{ position:"bottom" } } }
+  });
+
+  chartDays = new window.Chart(ctx2, {
+    type: "line",
+    data: { labels: dayLabels, datasets: [{ data: dayValues, tension:0.3 }] },
+    options: { responsive:true, plugins:{ legend:{ display:false } } }
+  });
+}
+
+/* ================= List ================= */
+function renderList(list){
   listArea.innerHTML = "";
 
-  if (filtered.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "muted";
-    empty.textContent = "ما فيه عمليات.";
-    listArea.appendChild(empty);
+  if (list.length === 0){
+    const d = document.createElement("div");
+    d.className = "muted";
+    d.textContent = "ما فيه عمليات.";
+    listArea.appendChild(d);
     return;
   }
 
-  for (const t of filtered) {
-    const row = document.createElement("div");
-    row.className = "item";
+  for (const t of list){
+    const item = document.createElement("div");
+    item.className = "item";
 
     const meta = document.createElement("div");
     meta.className = "meta";
+    meta.innerHTML = `
+      <div><b>${t.amt} دج</b> <span class="muted small">— ${t.date}</span></div>
+      <div class="desc">${t.cat} • ${t.desc || "(بدون وصف)"}</div>
+    `;
 
-    const top = document.createElement("b");
-    top.textContent = `${t.amt || 0} دج`;
+    const actions = document.createElement("div");
+    actions.className = "row";
+    actions.style.justifyContent = "flex-start";
 
-    const desc = document.createElement("div");
-    desc.className = "desc";
-    desc.textContent = `${t.date || ""} — ${t.desc || ""}`;
+    const del = document.createElement("button");
+    del.className = "btn danger small";
+    del.textContent = "حذف";
+    del.onclick = async () => {
+      if (!currentUser) return;
+      if (!confirm("متأكد تحذف؟")) return;
+      await delTx(currentUser.uid, t.id);
+    };
 
-    meta.appendChild(top);
-    meta.appendChild(desc);
-
-    row.appendChild(meta);
-    listArea.appendChild(row);
+    actions.appendChild(del);
+    item.appendChild(meta);
+    item.appendChild(actions);
+    listArea.appendChild(item);
   }
 }
 
-function renderKPIs() {
-  const monthNow = monthKeyFromYMD(todayYMD());
-  const txThisMonth = cachedTx.filter(t => t.month === monthNow);
-  const total = txThisMonth.reduce((s, t) => s + num(t.amt), 0);
+/* ================= Render all ================= */
+function renderAll(){
+  if (!currentUser) return;
 
-  kpiSalary.textContent = String(settings.salary || 0);
-  kpiMax.textContent = String(settings.max || 0);
-  kpiTotal.textContent = String(total);
+  const monthList = txForCurrentMonth();
+  const filtered = applyFilters(monthList);
 
-  const remain = (settings.max || 0) - total;
-  kpiRemain.textContent = String(remain);
+  monthLabelEl.textContent = monthLabel(currentMonth);
+
+  renderKPI(monthList);
+  buildCalendar(monthList);
+  renderCharts(monthList);
+  renderList(filtered);
 }
 
-// ===================== Modal helpers =====================
-function openModal(backEl) {
-  backEl.classList.add("show");
-}
-function closeModal(backEl) {
-  backEl.classList.remove("show");
-}
+/* ================= Events ================= */
+btnLogin.addEventListener("click", async () => {
+  const email = toEmail(loginUser.value);
+  const pass = String(loginPass.value || "");
 
-// ===================== Auth actions =====================
-async function doLogin() {
-  const u = usernameToEmail(loginUser.value);
-  const p = String(loginPass.value || "");
-
-  if (!u || !p) return toast("اكتب اسم المستخدم وكلمة السر");
+  if (!email || !pass) return setHint("اكتب اسم/إيميل + كلمة السر");
+  setHint("جاري تسجيل الدخول...");
 
   try {
-    await signInWithEmailAndPassword(auth, u, p);
+    await signInWithEmailAndPassword(auth, email, pass);
+    setHint("");
   } catch (e) {
-    toast("فشل تسجيل الدخول ❌\nتأكد من البيانات أو سوّ إنشاء حساب.");
-    console.error(e);
+    setHint("فشل الدخول. تأكد من البيانات أو سو إنشاء حساب.");
   }
-}
-
-async function doSignup() {
-  const rawU = normalizeUsername(loginUser.value);
-  const u = usernameToEmail(rawU);
-  const p = String(loginPass.value || "");
-
-  if (!rawU || !p) return toast("اكتب اسم المستخدم وكلمة السر");
-  if (p.length < 6) return toast("كلمة السر لازم 6 أحرف أو أكثر");
-
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, u, p);
-    const uid = cred.user.uid;
-
-    // نخزن اسم المستخدم
-    await setDoc(userRoot(uid), { username: rawU, createdAt: serverTimestamp() }, { merge: true });
-
-    // settings افتراضية
-    await setDoc(settingsDoc(uid), { salary: 0, max: 0 }, { merge: true });
-
-    toast("تم إنشاء الحساب ✅");
-  } catch (e) {
-    // غالبًا الحساب موجود
-    toast("ما قدرنا ننشئ الحساب ❌\nممكن الاسم مستخدم قبل.");
-    console.error(e);
-  }
-}
-
-async function doLogout() {
-  await signOut(auth);
-}
-
-// ===================== Wire events =====================
-btnLogin.addEventListener("click", doLogin);
-btnSignup.addEventListener("click", doSignup);
-btnLogout.addEventListener("click", doLogout);
-
-btnAdd.addEventListener("click", () => {
-  fDate.value = todayYMD();
-  fAmt.value = "";
-  fDesc.value = "";
-  openModal(modalBack);
 });
 
-modalClose.addEventListener("click", () => closeModal(modalBack));
-modalCancel.addEventListener("click", () => closeModal(modalBack));
+btnSignup.addEventListener("click", async () => {
+  const email = toEmail(loginUser.value);
+  const pass = String(loginPass.value || "");
+
+  if (!email || !pass) return setHint("اكتب اسم/إيميل + كلمة السر");
+  if (pass.length < 6) return setHint("كلمة السر لازم 6 أحرف أو أكثر");
+
+  setHint("جاري إنشاء الحساب...");
+  try {
+    await createUserWithEmailAndPassword(auth, email, pass);
+    setHint("تم إنشاء الحساب ✅");
+  } catch (e) {
+    setHint("ما قدرنا ننشئ الحساب (ممكن الاسم مستخدم قبل).");
+  }
+});
+
+btnLogout.addEventListener("click", async () => {
+  await signOut(auth);
+});
+
+btnAdd.addEventListener("click", () => {
+  fDate.value = ymd(new Date());
+  fAmt.value = "";
+  fDesc.value = "";
+  fCat.value = "أكل";
+  open(modalBack);
+});
+
+modalClose.addEventListener("click", ()=>close(modalBack));
+modalCancel.addEventListener("click", ()=>close(modalBack));
 
 modalSave.addEventListener("click", async () => {
   if (!currentUser) return;
 
-  const date = String(fDate.value || "").trim() || todayYMD();
+  const date = String(fDate.value || "").trim();
   const amt = num(fAmt.value);
   const desc = String(fDesc.value || "").trim();
+  const cat = String(fCat.value || "أخرى");
 
-  if (!date || !amt || !desc) return toast("كمّل البيانات (تاريخ/مبلغ/وصف)");
+  if (!date) return alert("اختر تاريخ");
+  if (!amt || amt <= 0) return alert("اكتب مبلغ صحيح");
+  if (!desc) return alert("اكتب وصف");
 
-  try {
-    await addTransaction(currentUser.uid, { date, amt, desc });
-    closeModal(modalBack);
-    toast("تمت الإضافة ✅");
-  } catch (e) {
-    toast("صار خطأ في الحفظ ❌");
-    console.error(e);
-  }
+  await addTx(currentUser.uid, { date, amt, desc, cat });
+  close(modalBack);
 });
 
-searchBox.addEventListener("input", renderList);
+searchBox.addEventListener("input", renderAll);
+filterCat.addEventListener("change", renderAll);
 
-// Settings
-btnSettings.addEventListener("click", () => openModal(settingsBack));
-settingsClose.addEventListener("click", () => closeModal(settingsBack));
-settingsSave.addEventListener("click", async () => {
+btnSettings.addEventListener("click", ()=>open(settingsBack));
+settingsClose.addEventListener("click", ()=>close(settingsBack));
+settingsSave.addEventListener("click", async ()=>{
   if (!currentUser) return;
-  try {
-    await saveSettings(currentUser.uid);
-    closeModal(settingsBack);
-  } catch (e) {
-    toast("صار خطأ في حفظ الإعدادات ❌");
-    console.error(e);
-  }
+  await saveSettings(currentUser.uid);
+  close(settingsBack);
 });
 
-// Backup
-btnBackup.addEventListener("click", () => openModal(backupBack));
-backupClose.addEventListener("click", () => closeModal(backupBack));
+btnBackup.addEventListener("click", ()=>open(backupBack));
+backupClose.addEventListener("click", ()=>close(backupBack));
 
-backupRefresh.addEventListener("click", async () => {
+backupRefresh.addEventListener("click", ()=>{
   if (!currentUser) return;
-
   const payload = {
     settings,
-    tx: cachedTx.map(t => ({
+    tx: txAll.map(t => ({
       date: t.date || "",
       amt: num(t.amt),
       desc: t.desc || "",
-    })),
+      cat: t.cat || "أخرى"
+    }))
   };
-
   backupText.value = JSON.stringify(payload, null, 2);
-  toast("تم تحديث نص النسخة ✅");
+  alert("تم تحديث النسخة ✅");
 });
 
-backupImport.addEventListener("click", async () => {
+backupImport.addEventListener("click", async ()=>{
   if (!currentUser) return;
-  try {
-    const txt = String(backupText.value || "").trim();
-    if (!txt) return toast("الصق JSON أول");
+  const raw = String(backupText.value || "").trim();
+  if (!raw) return alert("الصق JSON أول");
 
-    const payload = JSON.parse(txt);
-    await importBackup(currentUser.uid, payload);
+  let payload;
+  try { payload = JSON.parse(raw); } catch { return alert("JSON غير صحيح"); }
+
+  if (payload?.settings){
+    await setDoc(settingsDoc(currentUser.uid), {
+      salary: num(payload.settings.salary),
+      max: num(payload.settings.max)
+    }, { merge:true });
     await loadSettings(currentUser.uid);
-
-    toast("تم الاستيراد ✅");
-  } catch (e) {
-    toast("JSON غير صحيح ❌");
-    console.error(e);
   }
+
+  const arr = Array.isArray(payload?.tx) ? payload.tx : [];
+  for (const t of arr){
+    const date = String(t.date || "").slice(0,10);
+    if (!date) continue;
+    await addTx(currentUser.uid, {
+      date,
+      amt: num(t.amt),
+      desc: String(t.desc || ""),
+      cat: String(t.cat || "أخرى")
+    });
+  }
+
+  alert("تم الاستيراد ✅");
 });
 
-backupCSV.addEventListener("click", () => {
+backupCSV.addEventListener("click", ()=>{
   const rows = [
-    ["date", "amt", "desc"],
-    ...cachedTx.map(t => [t.date || "", num(t.amt), t.desc || ""]),
+    ["date","amt","cat","desc"],
+    ...txAll.map(t => [t.date || "", num(t.amt), t.cat || "أخرى", t.desc || ""])
   ];
-  downloadCSV("kacemB-transactions.csv", rows);
+  const csv = rows.map(r => r.map(x => "${String(x).replaceAll('"','""')}").join(",")).join("\n");
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "kacemB.csv";
+  a.click();
+  URL.revokeObjectURL(url);
 });
 
-// ===================== Auth state =====================
-onAuthStateChanged(auth, async (user) => {
-  currentUser = user;
+prevMonth.addEventListener("click", ()=>{
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth()-1, 1);
+  activeDay = "";
+  dayHint.textContent = "";
+  renderAll();
+});
+nextMonth.addEventListener("click", ()=>{
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 1);
+  activeDay = "";
+  dayHint.textContent = "";
+  renderAll();
+});
+todayBtn.addEventListener("click", ()=>{
+  currentMonth = new Date();
+  activeDay = "";
+  dayHint.textContent = "";
+  renderAll();
+});
 
-  if (!user) {
+/* ================= Auth state ================= */
+onAuthStateChanged(auth, async (u)=>{
+  currentUser = u || null;
+
+  if (!currentUser){
     if (unsubTx) unsubTx();
-    cachedTx = [];
-    settings = { salary: 0, max: 0 };
-    loginHint.textContent = "اكتب اسم المستخدم + كلمة السر. (إنشاء حساب لأول مرة).";
+    txAll = [];
+    settings = { salary:0, max:0 };
     showLogin();
+    setHint("اكتب اسم مستخدم أو إيميل + كلمة السر. (كلمة السر 6+)");
     return;
   }
 
   showHome();
-  whoAmI.textContent = `UID: ${user.uid}`;
+  whoAmI.textContent = currentUser.email || currentUser.uid;
 
-  try {
-    await loadSettings(user.uid);
-    startTxListener(user.uid);
+  // تأكد وثيقة المستخدم موجودة
+  await setDoc(userDoc(currentUser.uid), { lastLogin: serverTimestamp() }, { merge:true });
 
-    // اسم المستخدم من الوثيقة
-    const uSnap = await getDoc(userRoot(user.uid));
-    const uname = uSnap.exists() ? (uSnap.data().username || "") : "";
-    if (uname) whoAmI.textContent = `مستخدم: ${uname}`;
+  await loadSettings(currentUser.uid);
+  startTx(currentUser.uid);
 
-  } catch (e) {
-    toast("فيه مشكلة إعدادات/قواعد Firestore ❌");
-    console.error(e);
-  }
+  monthLabelEl.textContent = monthLabel(currentMonth);
+  renderAll();
 });
