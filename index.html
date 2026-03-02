@@ -5,83 +5,193 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>kacem B</title>
   <meta name="theme-color" content="#0b1220" />
-  <link rel="manifest" href="manifest.json">
-
   <style>
-    body{
-      margin:0;
-      background:#0b1220;
-      color:white;
-      font-family:system-ui;
-    }
-    .wrap{
-      max-width:900px;
-      margin:auto;
-      padding:20px;
-    }
-    .card{
-      background:#101a33;
-      padding:15px;
-      border-radius:12px;
-      margin-top:15px;
-    }
-    .btn{
-      padding:10px 15px;
-      border:none;
-      border-radius:8px;
-      cursor:pointer;
-      font-weight:bold;
-    }
-    .primary{
-      background:#2d6cff;
-      color:white;
-    }
-    input{
-      width:100%;
-      padding:8px;
-      margin-top:5px;
-      border-radius:8px;
-      border:none;
-    }
+    :root{--bg:#0b1220;--card:#101a33;--text:#e9efff;--muted:#9fb0d6;--bd:rgba(255,255,255,.10);--pri:rgba(110,168,255,.22);--pri2:rgba(110,168,255,.38);--danger:rgba(255,90,90,.18)}
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Kufi Arabic",Arial}
+    body{margin:0;background:linear-gradient(180deg,#071023,#0b1220);color:var(--text);min-height:100vh}
+    .wrap{max-width:980px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .title{font-weight:900;font-size:22px}
+    .card{background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:16px;padding:14px}
+    .btn{border:1px solid var(--bd);background:rgba(255,255,255,.04);color:var(--text);padding:10px 12px;border-radius:12px;font-weight:800;cursor:pointer}
+    .btn.primary{background:var(--pri);border-color:var(--pri2)}
+    .btn.danger{background:var(--danger);border-color:rgba(255,90,90,.35)}
+    input, textarea{width:100%;border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--text);padding:10px 12px;border-radius:12px;outline:none}
+    label{color:#c9d3f3;font-size:13px}
+    .muted{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    @media (max-width:720px){.grid{grid-template-columns:1fr}}
+    .kpi{background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
+    .kpi b{font-size:16px}
+    .item{display:flex;gap:10px;justify-content:space-between;align-items:center;border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.16);border-radius:16px;padding:12px}
+    .item .meta{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .item .meta .desc{color:#cfd7ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}
+    .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
+    .modal{max-width:760px;width:100%;background:#0f1930;border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:14px}
+    .modalBack.show{display:flex}
+    .small{font-size:12px}
   </style>
 </head>
 
 <body>
+  <div class="wrap">
+    <div class="row">
+      <div class="title">kacem B</div>
+      <div class="row" style="justify-content:flex-start">
+        <button id="btnSettings" class="btn" style="display:none">تعديل</button>
+        <button id="btnBackup" class="btn" style="display:none">نسخ احتياطي</button>
+        <button id="btnLogout" class="btn danger" style="display:none">خروج</button>
+      </div>
+    </div>
 
-<div class="wrap">
+    <!-- Login -->
+    <div id="loginCard" class="card" style="display:none">
+      <div class="title" style="font-size:18px;margin-bottom:8px">تسجيل دخول / إنشاء حساب</div>
+      <div class="grid">
+        <div>
+          <label>اسم المستخدم</label>
+          <input id="loginUser" placeholder="مثال: kacem">
+        </div>
+        <div>
+          <label>كلمة السر</label>
+          <input id="loginPass" type="password" placeholder="••••••••">
+        </div>
+      </div>
 
-  <!-- تسجيل الدخول -->
-  <div id="loginCard" class="card">
-    <h3>تسجيل دخول</h3>
+      <div class="row" style="margin-top:10px;justify-content:center;gap:10px;">
+        <button id="btnLogin" class="btn primary">دخول</button>
+        <button id="btnSignup" class="btn">إنشاء حساب</button>
+      </div>
 
-    <label>البريد الإلكتروني</label>
-    <input id="loginUser" type="email">
+      <div class="muted small" style="margin-top:10px" id="loginHint"></div>
+    </div>
 
-    <label style="margin-top:10px">كلمة السر</label>
-    <input id="loginPass" type="password">
+    <!-- Home -->
+    <div id="homeArea" style="display:none;display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="row">
+          <b>مرحبًا</b>
+          <div class="muted small" id="whoAmI"></div>
+        </div>
+      </div>
 
-    <div style="margin-top:15px">
-      <button id="btnLogin" class="btn primary">دخول</button>
-      <button id="btnSignup" class="btn">إنشاء حساب</button>
+      <div class="card">
+        <div class="row">
+          <b>الملخص</b>
+          <div class="muted small">هذا الشهر</div>
+        </div>
+
+        <div class="grid" style="margin-top:10px">
+          <div class="kpi"><span class="muted">الراتب</span><b id="kpiSalary">0</b></div>
+          <div class="kpi"><span class="muted">الماكس</span><b id="kpiMax">0</b></div>
+          <div class="kpi"><span class="muted">مجموع المصروفات</span><b id="kpiTotal">0</b></div>
+          <div class="kpi"><span class="muted">الباقي (من الماكس)</span><b id="kpiRemain">0</b></div>
+        </div>
+
+        <div class="row" style="margin-top:12px;justify-content:flex-start">
+          <button id="btnAdd" class="btn primary">+ إضافة صرف</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <b>العمليات</b>
+        <div style="margin-top:10px">
+          <label>بحث</label>
+          <input id="searchBox" placeholder="ابحث بالوصف/المبلغ/التاريخ">
+        </div>
+
+        <div id="listArea" style="display:flex;flex-direction:column;gap:10px;margin-top:12px"></div>
+      </div>
     </div>
   </div>
 
-  <!-- الصفحة الرئيسية -->
-  <div id="homeArea" class="card" style="display:none">
-    <h3>الصفحة الرئيسية</h3>
-    <button id="btnLogout" class="btn">خروج</button>
+  <!-- Add Modal -->
+  <div id="modalBack" class="modalBack">
+    <div class="modal">
+      <div class="row">
+        <b>إضافة صرف</b>
+        <button id="modalClose" class="btn">إغلاق</button>
+      </div>
+
+      <div class="grid" style="margin-top:10px">
+        <div>
+          <label>التاريخ (YYYY-MM-DD)</label>
+          <input id="fDate" placeholder="2026-03-01">
+        </div>
+        <div>
+          <label>المبلغ</label>
+          <input id="fAmt" inputmode="numeric" placeholder="مثال: 1200">
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <label>الوصف</label>
+        <input id="fDesc" placeholder="مثال: قهوة / بنزين...">
+      </div>
+
+      <div class="row" style="margin-top:12px;justify-content:flex-start">
+        <button id="modalSave" class="btn primary">حفظ</button>
+        <button id="modalCancel" class="btn">إلغاء</button>
+      </div>
+      <div class="muted small" style="margin-top:10px">كل بياناتك محفوظة بحسابك في Firestore.</div>
+    </div>
   </div>
 
-</div>
+  <!-- Settings Modal -->
+  <div id="settingsBack" class="modalBack">
+    <div class="modal">
+      <div class="row">
+        <b>تعديل الراتب/الماكس</b>
+        <button id="settingsClose" class="btn">إغلاق</button>
+      </div>
 
-<!-- تحميل app.js (مهم يكون سطر واحد فقط) -->
-<script type="module" src="./app.js?v=10"></script>
+      <div class="card" style="margin-top:10px">
+        <div class="grid">
+          <div>
+            <label>الراتب الشهري</label>
+            <input id="sSalary" inputmode="numeric" placeholder="مثال: 50000">
+          </div>
+          <div>
+            <label>الماكس (حد الصرف)</label>
+            <input id="sMax" inputmode="numeric" placeholder="مثال: 30000">
+          </div>
+        </div>
 
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js").catch(()=>{});
-}
-</script>
+        <div class="row" style="margin-top:12px;justify-content:flex-start">
+          <button id="settingsSave" class="btn primary">حفظ</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
+  <!-- Backup Modal -->
+  <div id="backupBack" class="modalBack">
+    <div class="modal">
+      <div class="row">
+        <b>نسخ احتياطي</b>
+        <button id="backupClose" class="btn">إغلاق</button>
+      </div>
+
+      <div class="card" style="margin-top:10px">
+        <b>1) JSON</b>
+        <div class="muted small">انسخه… وللاسترجاع الصقه واضغط “استيراد”.</div>
+        <textarea id="backupText" rows="10" style="margin-top:10px"></textarea>
+        <div class="row" style="margin-top:10px;justify-content:flex-start">
+          <button id="backupRefresh" class="btn">تحديث النص</button>
+          <button id="backupImport" class="btn primary">استيراد</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:10px">
+        <b>2) CSV</b>
+        <div class="muted small">ينزّل ملف CSV على جهازك.</div>
+        <div class="row" style="margin-top:10px;justify-content:flex-start">
+          <button id="backupCSV" class="btn primary">تصدير CSV</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- مهم: هذا السطر الوحيد -->
+  <script type="module" src="./app.js?v=1"></script>
 </body>
 </html>
