@@ -1,21 +1,14 @@
-// app.js (Firebase Username+Password + Cloud Sync)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import {
-  getAuth,
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+// ===========================
+// Firebase (CDN - Modular v9)
+// ===========================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, deleteDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";
 
-/** 1) حط الكونفيق حقك هنا */
+// ===========================
+// 1) Firebase Config (مالك)
+// ===========================
 const firebaseConfig = {
   apiKey: "AIzaSyAY0UUup62U68r2Hv1mS6ffX4ZjSmvcOqQ",
   authDomain: "kacem-b.firebaseapp.com",
@@ -26,460 +19,428 @@ const firebaseConfig = {
   measurementId: "G-WM1LNSFQ2J"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+let analytics = null;
+try { analytics = getAnalytics(app); } catch (_) {}
+
 const auth = getAuth(app);
-// ===== Firebase Login =====
-const loginBtn = document.getElementById("btnLogin");
-
-loginBtn.addEventListener("click", async () => {
-  const email = document.getElementById("loginUser").value.trim();
-  const pass = document.getElementById("loginPass").value.trim();
-
-  if (!email || !pass) {
-    alert("اكتب الإيميل وكلمة السر");
-    return;
-  }
-
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-    alert("تم تسجيل الدخول ✅");
-  } catch (error) {
-    alert("الحساب غير موجود، سيتم إنشاء حساب جديد");
-    try {
-      await createUserWithEmailAndPassword(auth, email, pass);
-      alert("تم إنشاء الحساب وتسجيل الدخول ✅");
-    } catch (err) {
-      alert("خطأ: " + err.message);
-    }
-  }
-});
 const db = getFirestore(app);
 
-// ---------- Helpers ----------
-const pad2 = (n) => String(n).padStart(2, "0");
-const now = () => new Date();
-const ym = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
-const ymd = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-
-const parseYMD = (s) => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((s || "").trim());
-  if (!m) return null;
-  const y = +m[1], mo = +m[2], da = +m[3];
-  const d = new Date(y, mo - 1, da);
-  if (d.getFullYear() !== y || d.getMonth() !== mo - 1 || d.getDate() !== da) return null;
-  return d;
-};
-
-const toInt = (s) => {
-  const n = Number(String(s ?? "").replace(/[^\d]/g, ""));
-  return Number.isFinite(n) ? n : 0;
-};
-const money = (n) => `${(n || 0).toLocaleString("ar-DZ")} دج`;
-const uid = () => Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
-
+// ===========================
+// Helpers
+// ===========================
 const $ = (id) => document.getElementById(id);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-const setVisible = (el, yes) => (el.style.display = yes ? "" : "none");
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const pad2 = (n) => String(n).padStart(2, "0");
+const ymd = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const ym = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+const money = (n) => (isFinite(n) ? Number(n).toLocaleString("ar-DZ") : "0");
+
+const firstDayOfMonth = (y, m) => new Date(y, m, 1);
+const lastDayOfMonth = (y, m) => new Date(y, m + 1, 0);
+
+function monthLabelText(d) {
+  const names = ["يناير","فبراير","مارس","أبريل","ماي","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+  return `${names[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function openModal(backId) { $(backId).classList.add("show"); }
-function closeModal(backId) { $(backId).classList.remove("show"); }
+// ===========================
+// UI Elements
+// ===========================
+const loginCard = $("loginCard");
+const homeArea = $("homeArea");
+const loginUser = $("loginUser");
+const loginPass = $("loginPass");
+const btnLogin = $("btnLogin");
+const btnSignup = $("btnSignup");
+const loginHint = $("loginHint");
 
-function requestNotify() {
-  if (!("Notification" in window)) return;
-  if (Notification.permission === "default") Notification.requestPermission().catch(()=>{});
+const btnLogout = $("btnLogout");
+const btnSettings = $("btnSettings");
+const btnBackup = $("btnBackup");
+
+const prevMonth = $("prevMonth");
+const nextMonth = $("nextMonth");
+const monthLabel = $("monthLabel");
+
+const kpiSalary = $("kpiSalary");
+const kpiMax = $("kpiMax");
+const kpiTotal = $("kpiTotal");
+const kpiRemainSalary = $("kpiRemainSalary");
+const kpiRemainMax = $("kpiRemainMax");
+const kpiEnd = $("kpiEnd");
+const kpiEnd2 = $("kpiEnd2");
+const stopAlert = $("stopAlert");
+const kpiRemainSalaryBox = $("kpiRemainSalaryBox");
+const kpiRemainMaxBox = $("kpiRemainMaxBox");
+
+const searchBox = $("searchBox");
+const listArea = $("listArea");
+const chips = Array.from(document.querySelectorAll(".chip"));
+
+const btnAdd = $("btnAdd");
+
+// Add/Edit modal
+const modalBack = $("modalBack");
+const modalClose = $("modalClose");
+const modalCancel = $("modalCancel");
+const modalSave = $("modalSave");
+const modalTitle = $("modalTitle");
+const fDate = $("fDate");
+const fAmt = $("fAmt");
+const fDesc = $("fDesc");
+
+// Settings modal
+const settingsBack = $("settingsBack");
+const settingsClose = $("settingsClose");
+const settingsSave = $("settingsSave");
+const settingsReset = $("settingsReset");
+const sSalary = $("sSalary");
+const sMax = $("sMax");
+
+// Backup modal
+const backupBack = $("backupBack");
+const backupClose = $("backupClose");
+const backupText = $("backupText");
+const backupRefresh = $("backupRefresh");
+const backupImport = $("backupImport");
+const backupCSV = $("backupCSV");
+
+// ===========================
+// State
+// ===========================
+let currentUser = null;
+let currentMonth = new Date();         // الشهر الحالي المعروض
+let currentSort = "new";               // new | old | high | low
+let userSettings = { salary: 0, max: 0 };
+let monthTx = [];                      // عمليات الشهر المعروض
+
+// ===========================
+// Firebase Paths
+// ===========================
+function userDocRef(uid) {
+  return doc(db, "users", uid);
 }
-function notifyStop(msg) {
-  alert(msg);
-  try {
-    if ("Notification" in window && Notification.permission === "granted") {
-      new Notification("kacem B", { body: msg });
-    }
-  } catch {}
+function txColRef(uid) {
+  return collection(db, "users", uid, "tx");
 }
 
-// ---------- State (per-user in Firestore) ----------
-const defaultState = {
-  version: 2,
-  settings: { salary: 47000, maxSpend: 47000, currency: "دج", integersOnly: true },
-  expenses: [],
-};
-
-let state = structuredClone(defaultState);
-let session = { loggedIn: false, user: null };
-let monthKey = ym(now());
-let sortMode = "new";
-let query = "";
-let editId = null;
-
-let saveTimer = null;
-function debounceSaveCloud() {
-  if (!session.user) return;
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveCloud, 600);
+// ===========================
+// Auth UI
+// ===========================
+function showLogin() {
+  loginCard.style.display = "block";
+  homeArea.style.display = "none";
+  btnLogout.style.display = "none";
+  btnSettings.style.display = "none";
+  btnBackup.style.display = "none";
 }
 
-function usernameToEmail(username) {
-  const u = (username || "").trim().toLowerCase();
-  // السماح بحروف/أرقام/._- فقط
-  if (!/^[a-z0-9._-]{3,20}$/.test(u)) return null;
-  return `${u}@kacem-b.local`;
+function showHome() {
+  loginCard.style.display = "none";
+  homeArea.style.display = "flex";
+  btnLogout.style.display = "inline-block";
+  btnSettings.style.display = "inline-block";
+  btnBackup.style.display = "inline-block";
 }
 
-async function loadCloud() {
-  const user = session.user;
-  if (!user) return;
-  const ref = doc(db, "users", user.uid);
+function setHint(msg) {
+  loginHint.textContent = msg || "";
+}
+
+// ===========================
+// Load / Save Settings
+// ===========================
+async function ensureUserDoc(uid) {
+  const ref = userDocRef(uid);
   const snap = await getDoc(ref);
-  if (snap.exists()) {
-    const data = snap.data();
-    state = {
-      ...defaultState,
-      ...data,
-      settings: { ...defaultState.settings, ...(data.settings || {}) },
-      expenses: Array.isArray(data.expenses) ? data.expenses : [],
-    };
-  } else {
-    state = structuredClone(defaultState);
-    await setDoc(ref, { ...state, createdAt: serverTimestamp() }, { merge: true });
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      salary: 0,
+      max: 0,
+      createdAt: Date.now()
+    });
   }
 }
 
-async function saveCloud() {
-  const user = session.user;
-  if (!user) return;
-  const ref = doc(db, "users", user.uid);
-  await setDoc(ref, { ...state, updatedAt: serverTimestamp() }, { merge: true });
+async function loadSettings(uid) {
+  await ensureUserDoc(uid);
+  const snap = await getDoc(userDocRef(uid));
+  const data = snap.data() || {};
+  userSettings.salary = Number(data.salary || 0);
+  userSettings.max = Number(data.max || 0);
+
+  // fill settings inputs
+  sSalary.value = userSettings.salary ? String(userSettings.salary) : "";
+  sMax.value = userSettings.max ? String(userSettings.max) : "";
 }
 
-// ---------- UI ----------
-function applyLoginUI() {
-  setVisible($("loginCard"), !session.loggedIn);
-  setVisible($("homeArea"), session.loggedIn);
-  setVisible($("btnSettings"), session.loggedIn);
-  setVisible($("btnBackup"), session.loggedIn);
-  setVisible($("btnLogout"), session.loggedIn);
+async function saveSettings(uid) {
+  const salary = Number(String(sSalary.value || "").replace(/[^\d.]/g, "")) || 0;
+  const max = Number(String(sMax.value || "").replace(/[^\d.]/g, "")) || 0;
 
-  // نغيّر النص تحت: ما عاد فيه حساب افتراضي
-  const hint = $("loginHint");
-  if (hint) hint.textContent = "سجّل دخول أو أنشئ حساب جديد. (اسم المستخدم 3-20: حروف/أرقام/._-)";
+  await setDoc(userDocRef(uid), { salary, max }, { merge: true });
+  userSettings.salary = salary;
+  userSettings.max = max;
 }
 
-// نضيف زر “إنشاء حساب” داخل بطاقة الدخول
-function ensureSignupButton() {
-  if ($("btnSignup")) return;
-  const btn = document.createElement("button");
-  btn.id = "btnSignup";
-  btn.className = "btn";
-  btn.textContent = "إنشاء حساب";
-  $("btnLogin").parentElement.appendChild(btn);
-  btn.onclick = signup;
+// ===========================
+// Load Transactions (by month)
+// ===========================
+function isInMonth(ymStr, dateStr) {
+  // dateStr: YYYY-MM-DD
+  return (dateStr || "").slice(0, 7) === ymStr;
 }
 
-function monthExpenses() {
-  const list = state.expenses.filter(x => (x.dateYMD || "").startsWith(monthKey));
-  const q = query.trim().toLowerCase();
-  let filtered = q
-    ? list.filter(x =>
-        (x.desc || "").toLowerCase().includes(q) ||
-        String(x.amount || "").includes(q) ||
-        (x.dateYMD || "").includes(q)
-      )
-    : list;
+async function loadMonthTx(uid) {
+  const ymStr = ym(currentMonth);
 
-  filtered.sort((a, b) => {
-    if (sortMode === "new") return (b.dateYMD || "").localeCompare(a.dateYMD || "");
-    if (sortMode === "old") return (a.dateYMD || "").localeCompare(b.dateYMD || "");
-    if (sortMode === "high") return (b.amount || 0) - (a.amount || 0);
-    if (sortMode === "low") return (a.amount || 0) - (b.amount || 0);
-    return 0;
+  // نجيب كل العمليات مرتبة بتاريخ الإضافة (تقريبًا)
+  const qy = query(txColRef(uid), orderBy("createdAt", "desc"));
+  const snap = await getDocs(qy);
+
+  const all = [];
+  snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
+
+  // فلترة الشهر
+  monthTx = all
+    .filter((t) => isInMonth(ymStr, t.date))
+    .map((t) => ({
+      id: t.id,
+      date: t.date || "",
+      amt: Number(t.amt || 0),
+      desc: t.desc || "",
+      createdAt: Number(t.createdAt || 0)
+    }));
+
+  renderAll();
+}
+
+// ===========================
+// Render
+// ===========================
+function applySortAndSearch(list) {
+  const q = (searchBox.value || "").trim().toLowerCase();
+
+  let filtered = list.filter((t) => {
+    if (!q) return true;
+    return (
+      String(t.date).toLowerCase().includes(q) ||
+      String(t.desc).toLowerCase().includes(q) ||
+      String(t.amt).includes(q)
+    );
   });
 
+  if (currentSort === "new") {
+    filtered.sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.createdAt - a.createdAt));
+  } else if (currentSort === "old") {
+    filtered.sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.createdAt - b.createdAt));
+  } else if (currentSort === "high") {
+    filtered.sort((a, b) => (b.amt - a.amt));
+  } else if (currentSort === "low") {
+    filtered.sort((a, b) => (a.amt - b.amt));
+  }
   return filtered;
 }
 
-function computeSums(list) {
-  const total = list.reduce((a, x) => a + (x.amount || 0), 0);
-  const salary = state.settings.salary || 0;
-  const maxSpend = state.settings.maxSpend || 0;
-  const remainingSalary = salary - total;
-  const remainingMax = maxSpend - total;
-  return { total, salary, maxSpend, remainingSalary, remainingMax };
+function renderKPI() {
+  const salary = userSettings.salary || 0;
+  const max = userSettings.max || 0;
+  const total = monthTx.reduce((s, t) => s + (t.amt || 0), 0);
+
+  kpiSalary.textContent = money(salary);
+  kpiMax.textContent = money(max);
+  kpiTotal.textContent = money(total);
+
+  const remainSalary = salary - total;
+  const remainMax = max - total;
+
+  kpiRemainSalary.textContent = money(remainSalary);
+  kpiRemainMax.textContent = money(remainMax);
+
+  // تلوين بسيط لو صار سالب
+  kpiRemainSalaryBox.classList.toggle("dangerBorder", remainSalary < 0);
+  kpiRemainMaxBox.classList.toggle("dangerBorder", remainMax < 0);
+
+  // stop alert لو تعدى max (إذا max محدد)
+  stopAlert.style.display = (max > 0 && total >= max) ? "block" : "none";
+
+  // ملخص آخر الشهر
+  const last = lastDayOfMonth(currentMonth.getFullYear(), currentMonth.getMonth());
+  kpiEnd.textContent = `حتى ${ymd(last)}`;
+  kpiEnd2.textContent = `المتبقي من الماكس: ${money(remainMax)}`;
 }
 
-function render() {
-  applyLoginUI();
-  if (!session.loggedIn) return;
+function renderList() {
+  listArea.innerHTML = "";
 
-  $("monthLabel").textContent = monthKey;
+  const list = applySortAndSearch(monthTx);
 
-  const list = monthExpenses();
-  const sums = computeSums(list);
-
-  $("kpiSalary").textContent = money(sums.salary);
-  $("kpiMax").textContent = money(sums.maxSpend);
-  $("kpiTotal").textContent = money(sums.total);
-  $("kpiRemainSalary").textContent = money(sums.remainingSalary);
-  $("kpiRemainMax").textContent = money(sums.remainingMax);
-
-  $("kpiEnd").textContent = `المجموع: ${money(sums.total)}`;
-  $("kpiEnd2").textContent = `الباقي: ${money(sums.remainingSalary)} | (من الماكس): ${money(sums.remainingMax)}`;
-
-  $("kpiRemainSalaryBox").classList.toggle("dangerBorder", sums.remainingSalary <= 0);
-  $("kpiRemainMaxBox").classList.toggle("dangerBorder", sums.remainingMax <= 0);
-
-  const stop = (sums.maxSpend > 0 && sums.total >= sums.maxSpend) || (sums.salary > 0 && sums.total >= sums.salary);
-  setVisible($("stopAlert"), stop);
-
-  if (stop) {
-    const key = `notified_${monthKey}_${sums.total}`;
-    if (!session[key]) {
-      session[key] = true;
-      requestNotify();
-      notifyStop("وقف ✋ وصلت/تجاوزت الحد.");
-    }
-  }
-
-  const area = $("listArea");
-  area.innerHTML = "";
   if (list.length === 0) {
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerHTML = `<div class="muted">ما فيه مصاريف لهالشهر.</div>`;
-    area.appendChild(div);
+    const empty = document.createElement("div");
+    empty.className = "card muted";
+    empty.textContent = "ما فيه عمليات بهذا الشهر.";
+    listArea.appendChild(empty);
     return;
   }
 
-  for (const x of list) {
+  for (const t of list) {
     const item = document.createElement("div");
     item.className = "item";
-    item.innerHTML = `
-      <div class="meta">
-        <div style="font-weight:900">${money(x.amount)}</div>
-        <div class="desc">${escapeHtml(x.desc || "")}</div>
-        <div class="muted small">${escapeHtml(x.dateYMD || "")}</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start">
-        <button class="btn" data-act="edit" data-id="${x.id}">تعديل</button>
-        <button class="btn danger" data-act="del" data-id="${x.id}">حذف</button>
-      </div>
-    `;
-    area.appendChild(item);
-  }
-}
 
-function setMonth(delta) {
-  const [Y, M] = monthKey.split("-").map(Number);
-  const d = new Date(Y, (M - 1) + delta, 1);
-  monthKey = ym(d);
-  render();
-}
+    const meta = document.createElement("div");
+    meta.className = "meta";
 
-function openAdd() {
-  editId = null;
-  $("modalTitle").textContent = "إضافة صرف";
-  $("fDate").value = ymd(now());
-  $("fAmt").value = "";
-  $("fDesc").value = "";
-  openModal("modalBack");
-}
+    const top = document.createElement("div");
+    top.innerHTML = `<b>${money(t.amt)} دج</b> <span class="muted small">— ${t.date || ""}</span>`;
 
-function openEdit(id) {
-  const it = state.expenses.find(x => x.id === id);
-  if (!it) return;
-  editId = id;
-  $("modalTitle").textContent = "تعديل صرف";
-  $("fDate").value = it.dateYMD || ymd(now());
-  $("fAmt").value = String(it.amount || "");
-  $("fDesc").value = it.desc || "";
-  openModal("modalBack");
-}
+    const desc = document.createElement("div");
+    desc.className = "desc";
+    desc.textContent = t.desc || "(بدون وصف)";
 
-function saveExpense() {
-  const d = parseYMD($("fDate").value);
-  if (!d) return alert("التاريخ لازم يكون بالشكل YYYY-MM-DD");
-  const amount = toInt($("fAmt").value);
-  if (amount <= 0) return alert("اكتب مبلغ صحيح أكبر من 0");
-  const desc = ($("fDesc").value || "").trim();
-  if (!desc) return alert("اكتب وصف للمبلغ");
+    meta.appendChild(top);
+    meta.appendChild(desc);
 
-  const item = { id: editId || uid(), dateYMD: ymd(d), amount, desc };
+    const actions = document.createElement("div");
+    actions.className = "row";
+    actions.style.justifyContent = "flex-start";
 
-  if (editId) state.expenses = state.expenses.map(x => x.id === editId ? item : x);
-  else state.expenses = [item, ...state.expenses];
-
-  closeModal("modalBack");
-  render();
-  debounceSaveCloud();
-}
-
-function deleteExpense(id) {
-  if (!confirm("متأكد تحذف العملية؟")) return;
-  state.expenses = state.expenses.filter(x => x.id !== id);
-  render();
-  debounceSaveCloud();
-}
-
-function openSettings() {
-  $("sUser").value = ""; // ما عاد نغير يوزر/باس هنا (تتبع للحساب)
-  $("sPass").value = "";
-  $("sSalary").value = String(state.settings.salary || 0);
-  $("sMax").value = String(state.settings.maxSpend || 0);
-  openModal("settingsBack");
-}
-
-function saveSettings() {
-  const salary = toInt($("sSalary").value);
-  const maxSpend = toInt($("sMax").value);
-  if (salary <= 0) return alert("الراتب لازم يكون أكبر من 0");
-  if (maxSpend <= 0) return alert("الماكس لازم يكون أكبر من 0");
-
-  state.settings.salary = salary;
-  state.settings.maxSpend = maxSpend;
-
-  closeModal("settingsBack");
-  alert("تم حفظ الإعدادات.");
-  render();
-  debounceSaveCloud();
-}
-
-// ---------- Backup ----------
-function openBackup() {
-  $("backupText").value = JSON.stringify(state, null, 2);
-  openModal("backupBack");
-}
-function refreshBackupText() { $("backupText").value = JSON.stringify(state, null, 2); }
-function importBackupText() {
-  try {
-    const parsed = JSON.parse($("backupText").value || "");
-    state = {
-      ...defaultState,
-      ...parsed,
-      settings: { ...defaultState.settings, ...(parsed.settings || {}) },
-      expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
+    const del = document.createElement("button");
+    del.className = "btn danger";
+    del.textContent = "حذف";
+    del.onclick = async () => {
+      if (!currentUser) return;
+      if (!confirm("متأكد تحذف؟")) return;
+      await deleteDoc(doc(db, "users", currentUser.uid, "tx", t.id));
+      await loadMonthTx(currentUser.uid);
     };
-    alert("تم الاستيراد.");
-    closeModal("backupBack");
-    render();
-    debounceSaveCloud();
-  } catch { alert("النص مو JSON صحيح."); }
-}
-function exportCSV() {
-  const rows = [
-    ["id","date","amount","desc"].join(","),
-    ...state.expenses.map(x => {
-      const safe = String(x.desc || "").replace(/"/g,'""');
-      return [x.id, x.dateYMD, x.amount, `"${safe}"`].join(",");
-    })
-  ];
-  const csv = rows.join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `kacem_b_expenses_${Date.now()}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
 
-// ---------- Auth (username + password) ----------
-async function login() {
-  const username = ($("loginUser").value || "").trim();
-  const password = $("loginPass").value || "";
-  const email = usernameToEmail(username);
-  if (!email) return alert("اسم المستخدم لازم يكون 3-20 (حروف/أرقام/._-)");
-  if (!password || password.length < 6) return alert("كلمة السر لازم تكون 6 أحرف أو أكثر");
+    actions.appendChild(del);
 
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-  } catch (e) {
-    alert("فشل الدخول. تأكد من اسم المستخدم وكلمة السر.");
+    item.appendChild(meta);
+    item.appendChild(actions);
+    listArea.appendChild(item);
   }
 }
 
-async function signup() {
-  const username = ($("loginUser").value || "").trim();
-  const password = $("loginPass").value || "";
-  const email = usernameToEmail(username);
-  if (!email) return alert("اسم المستخدم لازم يكون 3-20 (حروف/أرقام/._-)");
-  if (!password || password.length < 6) return alert("كلمة السر لازم تكون 6 أحرف أو أكثر");
-
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    // نحفظ “username” داخل ملف المستخدم (للعرض فقط)
-    await setDoc(doc(db, "users", cred.user.uid), { username: username.toLowerCase(), ...defaultState, createdAt: serverTimestamp() }, { merge: true });
-    alert("تم إنشاء الحساب ✅");
-  } catch (e) {
-    // غالباً الاسم مستخدم (الإيميل موجود)
-    alert("ما قدرنا نسوي الحساب. غالباً اسم المستخدم مستخدم أو فيه مشكلة.");
-  }
+function renderMonthHeader() {
+  monthLabel.textContent = monthLabelText(currentMonth);
 }
 
-// ---------- Events ----------
-$("btnLogin").onclick = login;
-$("btnLogout").onclick = () => signOut(auth);
+function renderAll() {
+  renderMonthHeader();
+  renderKPI();
+  renderList();
+}
 
-$("btnAdd").onclick = openAdd;
+// ===========================
+// Modals
+// ===========================
+function openModal() {
+  modalBack.classList.add("show");
+}
+function closeModal() {
+  modalBack.classList.remove("show");
+}
+function openSettings() {
+  settingsBack.classList.add("show");
+}
+function closeSettings() {
+  settingsBack.classList.remove("show");
+}
+function openBackup() {
+  backupBack.classList.add("show");
+}
+function closeBackup() {
+  backupBack.classList.remove("show");
+}
 
-$("modalClose").onclick = () => closeModal("modalBack");
-$("modalCancel").onclick = () => closeModal("modalBack");
-$("modalSave").onclick = saveExpense;
-
-$("btnSettings").onclick = openSettings;
-$("settingsClose").onclick = () => closeModal("settingsBack");
-$("settingsSave").onclick = saveSettings;
-
-$("btnBackup").onclick = openBackup;
-$("backupClose").onclick = () => closeModal("backupBack");
-$("backupRefresh").onclick = refreshBackupText;
-$("backupImport").onclick = importBackupText;
-$("backupCSV").onclick = exportCSV;
-
-$("prevMonth").onclick = () => setMonth(-1);
-$("nextMonth").onclick = () => setMonth(1);
-
-$("searchBox").oninput = (e) => { query = e.target.value || ""; render(); };
-
-$$(".chip").forEach(ch => {
-  ch.onclick = () => {
-    $$(".chip").forEach(x => x.classList.remove("active"));
-    ch.classList.add("active");
-    sortMode = ch.dataset.sort;
-    render();
-  };
-});
-
-$("listArea").addEventListener("click", (e) => {
-  const btn = e.target.closest("button[data-act]");
-  if (!btn) return;
-  const id = btn.dataset.id;
-  const act = btn.dataset.act;
-  if (act === "edit") openEdit(id);
-  if (act === "del") deleteExpense(id);
-});
-
-(function init(){
-  ensureSignupButton();
-  monthKey = ym(now());
-
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      session.user = user;
-      session.loggedIn = true;
-      await loadCloud();
-      render();
-    } else {
-      session.user = null;
-      session.loggedIn = false;
-      state = structuredClone(defaultState);
-      render();
-    }
+// ===========================
+// Actions
+// ===========================
+async function addTx(uid, { date, amt, desc }) {
+  await addDoc(txColRef(uid), {
+    date,
+    amt: Number(amt || 0),
+    desc: String(desc || ""),
+    createdAt: Date.now()
   });
+}
 
-  render();
-})();
+function defaultAddForm() {
+  fDate.value = ymd(new Date());
+  fAmt.value = "";
+  fDesc.value = "";
+}
+
+// ===========================
+// Events (Login / Signup)
+// ===========================
+btnLogin.addEventListener("click", async () => {
+  const email = (loginUser.value || "").trim();
+  const pass = (loginPass.value || "").trim();
+
+  if (!email || !pass) {
+    setHint("اكتب الإيميل وكلمة السر.");
+    return;
+  }
+
+  setHint("جاري تسجيل الدخول...");
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    setHint("");
+  } catch (e) {
+    setHint(`فشل الدخول: ${e?.message || e}`);
+  }
+});
+
+btnSignup.addEventListener("click", async () => {
+  const email = (loginUser.value || "").trim();
+  const pass = (loginPass.value || "").trim();
+
+  if (!email || !pass) {
+    setHint("اكتب الإيميل وكلمة السر لإنشاء حساب.");
+    return;
+  }
+  if (pass.length < 6) {
+    setHint("كلمة السر لازم 6 أحرف أو أكثر.");
+    return;
+  }
+
+  setHint("جاري إنشاء الحساب...");
+  try {
+    await createUserWithEmailAndPassword(auth, email, pass);
+    setHint("تم إنشاء الحساب ✅");
+  } catch (e) {
+    setHint(`فشل إنشاء الحساب: ${e?.message || e}`);
+  }
+});
+
+// ===========================
+// Events (App)
+// ===========================
+btnLogout.addEventListener("click", async () => {
+  await signOut(auth);
+});
+
+btnSettings.addEventListener("click", () => {
+  openSettings();
+});
+
+btnBackup.addEventListener("click", async () => {
+  openBackup();
+  await refreshBackupText();
+});
+
+settingsClose.addEventListener("click", closeSettings);
+settingsSave.addEventListener("click", async () => {
+  if (!currentUser) return;
+  await saveSettings(currentUser.uid);
+  closeSettings();
+  renderAll();
+});
+settingsReset.addEventListener("click", async () => {
+  if (!currentUser) return;
+  if (!confirm("بتصفر الراتب والماكس؟")) return;
+  sSalary.value = "0";
