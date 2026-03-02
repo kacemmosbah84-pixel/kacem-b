@@ -1,3 +1,5 @@
+alert("app.js شغّال ✅");
+console.log("app.js loaded");
 // ===========================
 // Firebase (CDN - Modular v9)
 // ===========================
