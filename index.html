@@ -4,12 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>kacem B</title>
-  <meta name="theme-color" content="#0b1220" />
 
+  <meta name="theme-color" content="#0b1220" />
   <link rel="manifest" href="manifest.json">
+
+  <!-- iOS PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 
+  <!-- ✅ اقرأ ملف الستايل الخارجي (عشان أي تعديل فيه يبان) -->
+  <link rel="stylesheet" href="styles.css?v=2">
+
+  <!-- (اختياري) CSS سريع داخل الصفحة - تقدر تخليه أو تنقله لاحقًا لملف styles.css -->
   <style>
     :root{--bg:#0b1220;--card:#101a33;--text:#e9efff;--muted:#9fb0d6;--bd:rgba(255,255,255,.10);--pri:rgba(110,168,255,.22);--pri2:rgba(110,168,255,.38);--danger:rgba(255,90,90,.18);--warn:rgba(255,200,90,.14)}
     *{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Kufi Arabic",Arial}
@@ -87,7 +94,8 @@
     </div>
 
     <!-- Home -->
-    <div id="homeArea" style="display:none;display:flex;flex-direction:column;gap:12px">
+    <!-- ✅ كان عندك display:none;display:flex; وهذا غلط - خليناه بس none -->
+    <div id="homeArea" style="display:none;flex-direction:column;gap:12px">
 
       <div class="card">
         <div class="row">
@@ -133,7 +141,6 @@
         </div>
 
         <div class="calGrid" id="calGrid"></div>
-
         <div class="muted small" style="margin-top:10px" id="dayHint"></div>
       </div>
 
@@ -280,8 +287,8 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <!-- IMPORTANT: سطر واحد فقط لـ app.js -->
-  <script type="module" src="./app.js?v=1"></script>
+  <!-- ✅ IMPORTANT: كسر كاش app.js -->
+  <script type="module" src="./app.js?v=2"></script>
 
   <script>
     // PWA register
