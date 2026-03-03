@@ -1,179 +1,270 @@
 :root{
-  --bg:#0b1f2a;
+  /* خلفية باردة مثل الصورة */
+  --bg1:#e9f1ff;
+  --bg2:#f6fbff;
 
-  --brand:#1e90ff;        /* أزرق */
-  --good:#22c55e;         /* أخضر */
-  --warn:#facc15;         /* أصفر */
-  --bad:#ff4d6d;
+  /* كروت */
+  --card:#ffffff;
+  --card2:#f8fbff;
+  --bd:rgba(18, 48, 80, .10);
 
-  --glass: rgba(255,255,255,.12);
-  --glass2: rgba(255,255,255,.05);
-  --stroke: rgba(255,255,255,.25);
+  /* نصوص */
+  --text:#0f1b2d;
+  --muted:#5b6b86;
 
-  --text: rgba(255,255,255,.92);
-  --muted: rgba(255,255,255,.68);
+  /* أخضر مثل الشريط */
+  --green1:#4ade80;
+  --green2:#16a34a;
 
-  --shadow: 0 25px 60px rgba(0,0,0,.5);
+  /* أزرق خفيف */
+  --blue1:#5aa8ff;
+  --blue2:#2f7dff;
+
+  /* ظل */
+  --shadow: 0 18px 45px rgba(16, 40, 80, .18);
   --radius: 18px;
-  /* توافق مع الستايل الموجود داخل index.html */
---bd: var(--stroke);
---pri: rgba(30,144,255,.22);
---pri2: rgba(30,144,255,.38);
---danger: rgba(255,77,109,.18);
 }
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
+*{box-sizing:border-box}
+html,body{height:100%}
 
 body{
   margin:0;
-  font-family: system-ui,-apple-system,"Segoe UI",Tahoma,Arial;
+  font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Kufi Arabic",Arial;
   color:var(--text);
   background:
-    radial-gradient(900px 600px at 10% 10%, rgba(30,144,255,.25), transparent 60%),
-    radial-gradient(800px 500px at 80% 0%, rgba(34,197,94,.20), transparent 55%),
-    radial-gradient(700px 500px at 90% 90%, rgba(250,204,21,.18), transparent 55%),
-    linear-gradient(180deg,#07131c 0%,#0b1f2a 100%);
+    radial-gradient(900px 520px at 50% -10%, rgba(90,168,255,.25), transparent 55%),
+    radial-gradient(700px 520px at 90% 10%, rgba(74,222,128,.18), transparent 58%),
+    linear-gradient(180deg,var(--bg1),var(--bg2));
 }
 
-.hidden{ display:none !important; }
+/* layout general */
+.wrap{max-width:980px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.title{font-weight:900;font-size:22px}
 
-.container{
-  width:min(1200px,94vw);
-  margin:18px auto 40px;
-}
-
-/* Glass Effect */
-.glass{
-  background:linear-gradient(180deg,var(--glass),var(--glass2));
-  border:1px solid var(--stroke);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-}
-
-.view{ min-height:100vh; padding-bottom:40px; }
-
-.topbar{
-  position:sticky;
-  top:0;
-  z-index:20;
-  margin:12px auto 0;
-  width:min(1200px,94vw);
-  padding:14px 16px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.appname{ font-weight:900; }
-.sub{ font-size:12px; color:var(--muted); }
-
+/* card base (نخليها ناعمة مثل الصورة) */
 .card{
-  padding:16px;
-  margin:14px 0;
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  border:1px solid var(--bd);
+  border-radius:var(--radius);
+  padding:14px;
+  box-shadow: var(--shadow);
 }
 
-.card-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:10px;
-}
+/* نسخة ألطف */
+.softCard{padding:16px}
 
-.card-title{ font-weight:800; }
-
-.big-number{
-  font-size:34px;
-  font-weight:900;
-}
-
-.num{ font-weight:800; }
-
-.muted{ color:var(--muted); }
-.small{ font-size:12px; }
-
-.field{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  margin:10px 0;
-}
-
-input,select{
-  padding:12px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.2);
-  background:rgba(0,0,0,.3);
+/* buttons */
+.btn{
+  border:1px solid var(--bd);
+  background:rgba(255,255,255,.85);
   color:var(--text);
-}
-
-button{
+  padding:10px 12px;
   border-radius:14px;
-  padding:12px 14px;
-  border:none;
+  font-weight:900;
   cursor:pointer;
-  font-weight:600;
+  box-shadow: 0 10px 25px rgba(16,40,80,.12);
 }
-
-/* Buttons */
 .btn.primary{
-  background:linear-gradient(180deg,#1e90ff,#1575d1);
-  color:white;
+  background:linear-gradient(180deg, rgba(90,168,255,.30), rgba(47,125,255,.22));
+  border-color: rgba(47,125,255,.25);
 }
+.btn.danger{background:rgba(255,90,90,.12);border-color:rgba(255,90,90,.22)}
+.btn.warn{background:rgba(255,200,90,.16);border-color:rgba(255,200,90,.22)}
+.btn.small{padding:7px 10px;border-radius:12px;font-weight:900}
 
-.btn.success{
-  background:linear-gradient(180deg,#22c55e,#16a34a);
-  color:white;
-}
-
-.btn.danger{
-  background:linear-gradient(180deg,#ff4d6d,#e11d48);
-  color:white;
-}
-
-.btn.ghost{
-  background:rgba(255,255,255,.08);
-  color:white;
-}
-
-.progress{
+input,select,textarea{
   width:100%;
-  height:12px;
-  border-radius:999px;
-  background:rgba(255,255,255,.15);
-  overflow:hidden;
-  margin-top:10px;
-}
-
-.progress-bar{
-  height:100%;
-  background:linear-gradient(90deg,#1e90ff,#22c55e,#facc15);
-}
-
-.txn{
-  display:flex;
-  justify-content:space-between;
-  padding:12px;
+  border:1px solid var(--bd);
+  background:rgba(255,255,255,.85);
+  color:var(--text);
+  padding:10px 12px;
   border-radius:14px;
-  background:rgba(0,0,0,.25);
-  border:1px solid rgba(255,255,255,.15);
+  outline:none;
+}
+label{color:var(--muted);font-size:13px;font-weight:800}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+
+/* pills */
+.pill{
+  display:inline-flex;gap:6px;align-items:center;
+  border:1px solid var(--bd);
+  background:rgba(255,255,255,.70);
+  padding:6px 10px;border-radius:999px;font-weight:900;
 }
 
-.good{ color:var(--good); }
-.bad{ color:var(--bad); }
+/* alerts */
+.alert{margin-top:10px;padding:12px;border-radius:14px;border:1px solid var(--bd);font-weight:900}
+.alert.warn{background:rgba(255,200,90,.18);border-color:rgba(255,200,90,.25)}
+.alert.danger{background:rgba(255,90,90,.14);border-color:rgba(255,90,90,.22)}
 
-.modal{
-  position:fixed;
-  inset:0;
+/* ===== HERO مثل الصورة ===== */
+.hero{
+  border-radius: 22px;
+  padding: 16px 16px 10px;
+  background:
+    radial-gradient(900px 420px at 50% 0%, rgba(90,168,255,.45), rgba(90,168,255,.05) 55%, transparent 75%),
+    linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.55));
+  border:1px solid rgba(18,48,80,.10);
+  box-shadow: 0 18px 60px rgba(16,40,80,.18);
+  overflow:hidden;
+}
+
+.heroInner{
   display:flex;
-  justify-content:center;
   align-items:center;
-  background:rgba(0,0,0,.6);
+  gap:12px;
 }
 
-.modal-card{
-  width:min(600px,90vw);
-  padding:20px;
+/* الشعار الدائري */
+.heroLogo{
+  width:74px;height:74px;border-radius:22px;
+  position:relative;
+  background:rgba(255,255,255,.85);
+  border:1px solid rgba(18,48,80,.10);
+  box-shadow: 0 16px 40px rgba(16,40,80,.18);
+  flex:0 0 auto;
+}
+.heroLogo .ring{
+  position:absolute;inset:10px;border-radius:999px;border:6px solid transparent;
+}
+.heroLogo .r1{border-color: rgba(47,125,255,.25)}
+.heroLogo .r2{inset:16px;border-width:6px;border-color: rgba(47,125,255,.55)}
+.heroLogo .r3{inset:22px;border-width:6px;border-color: rgba(255,200,90,.70)}
+.heroLogo .check{
+  position:absolute;left:50%;top:50%;
+  width:30px;height:18px;
+  border-left:6px solid var(--green2);
+  border-bottom:6px solid var(--green2);
+  transform: translate(-50%,-55%) rotate(-45deg);
+  border-radius:3px;
+  filter: drop-shadow(0 8px 14px rgba(22,163,74,.25));
+}
+.heroLogo .bars{
+  position:absolute;right:8px;bottom:8px;
+  display:flex;gap:3px;align-items:flex-end;
+}
+.heroLogo .bars span{
+  width:6px;border-radius:5px;background:linear-gradient(180deg,#fbbf24,#22c55e);
+}
+.heroLogo .bars span:nth-child(1){height:10px;opacity:.75}
+.heroLogo .bars span:nth-child(2){height:16px;opacity:.85}
+.heroLogo .bars span:nth-child(3){height:22px}
+
+/* النص */
+.heroHello{font-weight:1000;font-size:22px;letter-spacing:.2px}
+.heroSub{color:rgba(15,27,45,.68);font-weight:900}
+
+/* ===== goal card ===== */
+.goalTop{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.goalChipRow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:999px;
+  border:1px solid var(--bd);
+  background:rgba(255,255,255,.70);
+  font-weight:1000;font-size:12px;
+}
+.chipGreen{
+  background:rgba(74,222,128,.18);
+  border-color:rgba(22,163,74,.22);
+  color:#0b3b1e;
+}
+.chipGray{color:rgba(15,27,45,.72)}
+.goalAmount{
+  font-weight:1100;
+  font-size:40px;
+  line-height:1;
+  letter-spacing:.5px;
+}
+
+/* Progress */
+.goalBarOuter{
+  margin-top:12px;
+  position:relative;
+  height:18px;
+  border-radius:999px;
+  background:linear-gradient(180deg, rgba(16,40,80,.08), rgba(16,40,80,.05));
+  border:1px solid rgba(18,48,80,.10);
+  overflow:hidden;
+}
+.goalBarInner{
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(180deg, var(--green1), var(--green2));
+  box-shadow: 0 10px 26px rgba(22,163,74,.25);
+  transition: width .6s ease;
+}
+.goalGlow{
+  position:absolute;inset:-40px;
+  background: radial-gradient(220px 120px at 20% 50%, rgba(255,255,255,.35), transparent 60%);
+  pointer-events:none;
+}
+
+.goalMetaRow{
+  margin-top:12px;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.goalMeta{
+  padding:10px 12px;
+  border-radius:16px;
+  border:1px solid rgba(18,48,80,.10);
+  background:rgba(255,255,255,.70);
+}
+.goalMetaVal{font-weight:1100;font-size:16px;margin-top:4px}
+
+.goalMotivation{
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,200,90,.22);
+  background:rgba(255,200,90,.16);
+  font-weight:1000;
+}
+
+/* mini goal */
+.sectionHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.sectionTitle{font-weight:1100}
+.sectionHint{color:rgba(15,27,45,.55);font-weight:900;font-size:12px}
+
+.miniGoal{
+  display:flex;gap:12px;align-items:center;
+  padding:12px;border-radius:18px;
+  background:rgba(255,255,255,.70);
+  border:1px solid rgba(18,48,80,.10);
+}
+.miniIcon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  background:rgba(74,222,128,.16);border:1px solid rgba(22,163,74,.18);font-size:22px}
+.miniBody{flex:1;min-width:0}
+.miniTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.miniName{font-weight:1100}
+.miniPct{font-weight:1100;color:rgba(15,27,45,.72)}
+.miniBarOuter{height:10px;border-radius:999px;background:rgba(16,40,80,.08);border:1px solid rgba(18,48,80,.10);overflow:hidden;margin-top:8px}
+.miniBarInner{height:100%;border-radius:999px;background:linear-gradient(180deg, var(--blue1), var(--blue2));transition:width .6s ease}
+.miniMeta{margin-top:8px;color:rgba(15,27,45,.62);font-weight:900;font-size:12px}
+
+/* summary grid */
+.summaryGrid{
+  margin-top:10px;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.sumCard{
+  padding:12px;
+  border-radius:18px;
+  background:rgba(255,255,255,.70);
+  border:1px solid rgba(18,48,80,.10);
+}
+.sumLabel{color:rgba(15,27,45,.62);font-weight:1000;font-size:12px}
+.sumVal{font-weight:1100;font-size:20px;margin-top:6px}
+
+@media (max-width:720px){
+  .goalAmount{font-size:34px}
+  .goalMetaRow{grid-template-columns:1fr}
+  .summaryGrid{grid-template-columns:1fr}
 }

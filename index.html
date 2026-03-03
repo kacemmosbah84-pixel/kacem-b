@@ -3,226 +3,307 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>kacem B</title>
+  <title>MyGoal | هدفي</title>
 
-  <meta name="theme-color" content="#0b1220" />
+  <meta name="theme-color" content="#0b1f2a" />
   <link rel="manifest" href="manifest.json">
-
-  <!-- iOS PWA -->
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-  <!-- ✅ اقرأ ملف الستايل الخارجي (عشان أي تعديل فيه يبان) -->
-<link rel="stylesheet" href="styles.css?v=3">
-  <!-- (اختياري) CSS سريع داخل الصفحة - تقدر تخليه أو تنقله لاحقًا لملف styles.css -->
-  <style>
-    *{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Kufi Arabic",Arial}
-   body{
-  margin:0;
-  color:var(--text);
-  min-height:100vh;
-  background:
-    radial-gradient(900px 600px at 10% 10%, rgba(30,144,255,.25), transparent 60%),
-    radial-gradient(800px 500px at 80% 0%, rgba(34,197,94,.20), transparent 55%),
-    radial-gradient(700px 500px at 90% 90%, rgba(250,204,21,.18), transparent 55%),
-    linear-gradient(180deg,#07131c 0%, var(--bg) 100%);
-}
-    .wrap{max-width:980px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:12px}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-    .title{font-weight:900;font-size:22px}
-    .card{background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:16px;padding:14px}
-    .btn{border:1px solid var(--bd);background:rgba(255,255,255,.04);color:var(--text);padding:10px 12px;border-radius:12px;font-weight:800;cursor:pointer}
-    .btn.primary{background:var(--pri);border-color:var(--pri2)}
-    .btn.danger{background:var(--danger);border-color:rgba(255,90,90,.35)}
-    .btn.warn{background:var(--warn);border-color:rgba(255,200,90,.35)}
-    .btn.small{padding:7px 10px;border-radius:10px;font-weight:900}
-    input, select, textarea{width:100%;border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--text);padding:10px 12px;border-radius:12px;outline:none}
-    label{color:#c9d3f3;font-size:13px}
-    .muted{color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    @media (max-width:720px){.grid{grid-template-columns:1fr}}
-    .kpi{background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
-    .kpi b{font-size:16px}
-    .alert{margin-top:10px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);font-weight:900}
-    .alert.warn{background:rgba(255,200,90,.14);border-color:rgba(255,200,90,.30)}
-    .alert.danger{background:rgba(255,90,90,.14);border-color:rgba(255,90,90,.30)}
-    .item{display:flex;gap:10px;justify-content:space-between;align-items:center;border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.16);border-radius:16px;padding:12px}
-    .item .meta{display:flex;flex-direction:column;gap:4px;min-width:0}
-    .item .meta .desc{color:#cfd7ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}
-    .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
-    .modal{max-width:760px;width:100%;background:#0f1930;border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:14px}
-    .modalBack.show{display:flex}
-    .small{font-size:12px}
-
-    /* Calendar */
-    .calHead{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:10px}
-    .calDow{color:#c9d3f3;font-weight:900;font-size:12px;text-align:center;opacity:.9}
-    .calCell{border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.12);border-radius:14px;padding:10px;min-height:64px;cursor:pointer;display:flex;flex-direction:column;gap:6px}
-    .calCell.mutedCell{opacity:.45}
-    .calCell.active{outline:2px solid rgba(110,168,255,.55)}
-    .calDay{font-weight:900}
-    .calSum{font-size:12px;color:#cfd7ee}
-    .pill{display:inline-flex;gap:6px;align-items:center;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);padding:6px 10px;border-radius:999px;font-weight:900}
-  </style>
+  <link rel="stylesheet" href="styles.css?v=1">
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="row">
-      <div class="title">kacem B</div>
-      <div class="row" style="justify-content:flex-start">
-        <button id="btnInstall" class="btn warn small" style="display:none">تثبيت التطبيق</button>
-        <button id="btnSettings" class="btn" style="display:none">تعديل</button>
-        <button id="btnBackup" class="btn" style="display:none">نسخ احتياطي</button>
-        <button id="btnLogout" class="btn danger" style="display:none">خروج</button>
-      </div>
+  <!-- Splash (اختياري) -->
+  <div id="splash" class="splash">
+    <div class="splashCard glass">
+      <div class="splashLogo">MyGoal</div>
+      <div class="muted">تحميل…</div>
     </div>
+  </div>
 
-    <!-- Login -->
-    <div id="loginCard" class="card" style="display:none">
-      <div class="title" style="font-size:18px;margin-bottom:8px">تسجيل دخول / إنشاء حساب</div>
-      <div class="grid">
+  <!-- Auth -->
+  <div id="authView" class="container hidden">
+    <div class="glass cardPad">
+      <div class="authHead">
+        <div class="authTitle">أهلًا 👋</div>
+        <div class="muted">سجّل دخول عشان ينحفظ تقدمك</div>
+      </div>
+
+      <div class="authTabs">
+        <button id="tabLogin" class="tab active">تسجيل دخول</button>
+        <button id="tabSignup" class="tab">إنشاء حساب</button>
+      </div>
+
+      <div id="authMsg" class="notice hidden"></div>
+
+      <!-- Login form -->
+      <div id="loginForm" class="formGrid">
         <div>
-          <label>الإيميل (أو اسم مستخدم)</label>
-          <input id="loginUser" placeholder="مثال: kacem أو kacem@gmail.com">
+          <label>الإيميل أو اسم المستخدم</label>
+          <input id="loginUser" placeholder="kacem أو kacem@gmail.com">
         </div>
         <div>
-          <label>كلمة السر</label>
-          <input id="loginPass" type="password" placeholder="6 أحرف أو أكثر">
+          <label>كلمة المرور</label>
+          <input id="loginPass" type="password" placeholder="••••••••">
+        </div>
+        <button id="btnLogin" class="btn primary full">دخول</button>
+      </div>
+
+      <!-- Signup form -->
+      <div id="signupForm" class="formGrid hidden">
+        <div class="grid2">
+          <div>
+            <label>الاسم</label>
+            <input id="suFirst" placeholder="Kacem">
+          </div>
+          <div>
+            <label>اللقب</label>
+            <input id="suLast" placeholder="Mosbah">
+          </div>
+        </div>
+
+        <div>
+          <label>اسم المستخدم (بدون مسافات)</label>
+          <input id="suUsername" placeholder="kacem84">
+        </div>
+
+        <div>
+          <label>الإيميل</label>
+          <input id="suEmail" placeholder="kacem@gmail.com">
+        </div>
+
+        <div class="grid2">
+          <div>
+            <label>كلمة المرور (8+)</label>
+            <input id="suPass" type="password" placeholder="••••••••">
+          </div>
+          <div>
+            <label>تأكيد كلمة المرور</label>
+            <input id="suPass2" type="password" placeholder="••••••••">
+          </div>
+        </div>
+
+        <button id="btnSignup" class="btn primary full">إنشاء حساب</button>
+        <div class="muted small">بعد الإنشاء بنرسل لك رسالة تأكيد للإيميل.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="mainView" class="container hidden">
+
+    <!-- Top Bar -->
+    <div class="topBar">
+      <div class="topLeft">
+        <div class="appBadge glass">
+          <div class="appName">MyGoal</div>
+          <div class="muted small" id="monthLabelTop">—</div>
         </div>
       </div>
-      <div class="row" style="margin-top:10px;justify-content:center;gap:10px;">
-        <button id="btnLogin" class="btn primary">دخول</button>
-        <button id="btnSignup" class="btn">إنشاء حساب</button>
-      </div>
-      <div class="muted small" style="margin-top:10px" id="loginHint"></div>
-    </div>
 
-    <!-- Home -->
-    <!-- ✅ كان عندك display:none;display:flex; وهذا غلط - خليناه بس none -->
-    <div id="homeArea" style="display:none;flex-direction:column;gap:12px">
-<!-- ====== HOME (Main Page) ====== -->
-<div class="homeHero glass">
-  <div class="heroTop">
-    <div class="heroLogo" aria-hidden="true">
-      <!-- أيقونة بسيطة (تقدر تغيرها لاحقاً) -->
-      <svg viewBox="0 0 24 24" class="heroLogoSvg">
-        <path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" fill="currentColor" opacity=".18"/>
-        <path d="M9.2 12.2l1.8 1.8 3.9-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-
-    <div class="heroTxt">
-      <div class="heroTitle">
-        <span>مرحباً، </span><span id="helloName">...</span>
-      </div>
-      <div class="heroSub">رحلة هدفك السنوي</div>
-    </div>
-
-    <button id="btnSettings" class="btn mini ghost" style="display:none">⚙️</button>
-  </div>
-
-  <!-- كرت الهدف السنوي -->
-  <div class="goalCard">
-    <div class="goalMeta">
-      <div class="goalPct">
-        <span class="chip green" id="goalPctChip">0%</span>
-        <span class="chip" id="goalStageChip">بداية قوية</span>
-      </div>
-      <div class="goalBig" id="goalNowBig">0 دج</div>
-    </div>
-
-    <div class="barOuter" aria-label="شريط تقدم الهدف">
-      <div class="barInner" id="goalBarMain" style="width:0%"></div>
-    </div>
-
-    <div class="goalFoot">
-      <div class="goalFootItem">
-        <div class="muted small">المتبقي</div>
-        <div class="goalFootVal" id="goalRemain">0 دج</div>
-      </div>
-      <div class="goalFootItem">
-        <div class="muted small">باقي</div>
-        <div class="goalFootVal" id="goalDaysLeft">— يوم</div>
-      </div>
-      <div class="goalFootItem">
-        <div class="muted small">المعدل اليومي</div>
-        <div class="goalFootVal" id="goalDailyNeed">0 دج</div>
+      <div class="topRight">
+        <button id="btnInstall" class="btn mini warn hidden">تثبيت</button>
+        <button id="btnBackup" class="btn mini ghost">نسخ</button>
+        <button id="btnSettings" class="btn mini ghost">⚙️</button>
+        <button id="btnLogout" class="btn mini danger">خروج</button>
       </div>
     </div>
 
-    <div class="motivation" id="goalMotivation">🔥 يلا نبدأ… كل دج يقربك!</div>
-  </div>
-</div>
+    <!-- Pages -->
+    <main class="pages">
 
-<!-- أهداف صغيرة (اختياري) -->
-<div class="card glass">
-  <div class="sectionHead">
-    <div class="sectionTitle">أهدافك</div>
-    <div class="muted small">اختياري</div>
-  </div>
+      <!-- HOME -->
+      <section id="pageHome" class="page">
+        <div class="homeHero glass">
+          <div class="heroTop">
+            <div class="heroLogo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" class="heroLogoSvg">
+                <path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" fill="currentColor" opacity=".18"/>
+                <path d="M9.2 12.2l1.8 1.8 3.9-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
 
-  <div class="miniGoals">
-    <div class="miniGoal">
-      <div class="miniIcon" aria-hidden="true">🏠</div>
-      <div class="miniBody">
-        <div class="miniTop">
-          <div class="miniName">هدف إضافي</div>
-          <div class="miniPct" id="miniGoalPct">0%</div>
+            <div class="heroTxt">
+              <div class="heroTitle">
+                <span>مرحباً، </span><span id="helloName">...</span>
+              </div>
+              <div class="heroSub">رحلة هدفك السنوي</div>
+            </div>
+          </div>
+
+          <div class="goalCard">
+            <div class="goalMeta">
+              <div class="goalPct">
+                <span class="chip green" id="goalPctChip">0%</span>
+                <span class="chip" id="goalStageChip">بداية قوية</span>
+              </div>
+              <div class="goalBig" id="goalNowBig">0 دج</div>
+            </div>
+
+            <div class="barOuter" aria-label="شريط تقدم الهدف">
+              <div class="barInner" id="goalBarMain" style="width:0%"></div>
+            </div>
+
+            <div class="goalFoot">
+              <div class="goalFootItem">
+                <div class="muted small">المتبقي</div>
+                <div class="goalFootVal" id="goalRemain">0 دج</div>
+              </div>
+              <div class="goalFootItem">
+                <div class="muted small">باقي</div>
+                <div class="goalFootVal" id="goalDaysLeft">— يوم</div>
+              </div>
+              <div class="goalFootItem">
+                <div class="muted small">المعدل اليومي</div>
+                <div class="goalFootVal" id="goalDailyNeed">0 دج</div>
+              </div>
+            </div>
+
+            <div class="motivation" id="goalMotivation">🔥 يلا نبدأ… كل دج يقربك!</div>
+          </div>
         </div>
-        <div class="miniBarOuter">
-          <div class="miniBarInner" id="miniGoalBar" style="width:0%"></div>
+
+        <div class="glass cardPad">
+          <div class="sectionHead">
+            <div class="sectionTitle">ملخص هذا الشهر</div>
+            <div class="pill"><span class="muted">الشهر:</span> <span id="monthLabel">—</span></div>
+          </div>
+
+          <div class="summaryGrid">
+            <div class="sumCard">
+              <div class="muted small">مجموع الصرف</div>
+              <div class="sumVal" id="kpiTotal">0 دج</div>
+            </div>
+            <div class="sumCard">
+              <div class="muted small">الباقي (من الماكس)</div>
+              <div class="sumVal" id="kpiRemain">0 دج</div>
+            </div>
+            <div class="sumCard">
+              <div class="muted small">الماكس</div>
+              <div class="sumVal" id="kpiMax">0 دج</div>
+            </div>
+            <div class="sumCard">
+              <div class="muted small">الراتب</div>
+              <div class="sumVal" id="kpiSalary">0 دج</div>
+            </div>
+          </div>
+
+          <div id="nearAlert" class="alert warn hidden">تنبيه ⚠️ قربت توصل للماكس</div>
+          <div id="stopAlert" class="alert danger hidden">وقف ✋ وصلت/تجاوزت الحد</div>
+
+          <div class="row">
+            <button id="btnAdd" class="btn primary">+ إضافة صرف</button>
+          </div>
         </div>
-        <div class="miniMeta muted small"><span id="miniGoalNow">0</span> / <span id="miniGoalTarget">0</span> دج</div>
-      </div>
-    </div>
-  </div>
-</div>
+      </section>
 
-<!-- ملخص الشهر -->
-<div class="card glass">
-  <div class="sectionHead">
-    <div class="sectionTitle">ملخص هذا الشهر</div>
-    <div class="pill"><span class="muted">الشهر:</span> <span id="monthLabel">—</span></div>
+      <!-- TXNS -->
+      <section id="pageTxns" class="page hidden">
+        <div class="glass cardPad">
+          <div class="sectionHead">
+            <div class="sectionTitle">العمليات</div>
+            <div class="muted small" id="txnsHint">ابحث ورتّب</div>
+          </div>
+
+          <div class="grid2">
+            <div>
+              <label>بحث</label>
+              <input id="searchBox" placeholder="وصف / مبلغ / تاريخ / تصنيف">
+            </div>
+            <div>
+              <label>فلتر التصنيف</label>
+              <select id="filterCat">
+                <option value="">الكل</option>
+                <option value="أكل">أكل</option>
+                <option value="بنزين">بنزين</option>
+                <option value="فواتير">فواتير</option>
+                <option value="تسوق">تسوق</option>
+                <option value="أخرى">أخرى</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="listArea" class="listArea"></div>
+          <div id="emptyTxns" class="muted small hidden" style="margin-top:10px">ما فيه عمليات لعرضها.</div>
+        </div>
+      </section>
+
+      <!-- CHARTS -->
+      <section id="pageCharts" class="page hidden">
+        <div class="glass cardPad">
+          <button id="chartsToggle" class="collapseBtn">
+            <span>📊 الرسوم البيانية</span>
+            <span id="chartsArrow" class="arrow">▾</span>
+          </button>
+
+          <div id="chartsBody" class="chartsBody hidden">
+            <div class="grid2">
+              <div class="glass cardPad">
+                <div class="muted small">حسب التصنيف</div>
+                <canvas id="chartCat" height="180"></canvas>
+              </div>
+              <div class="glass cardPad">
+                <div class="muted small">حسب الأيام</div>
+                <canvas id="chartDays" height="180"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="muted small" style="margin-top:10px">
+            الرسم مخفي عشان ما يصير طويل — افتحه بالسهم 👆
+          </div>
+        </div>
+      </section>
+
+      <!-- PROFILE -->
+      <section id="pageProfile" class="page hidden">
+        <div class="glass cardPad">
+          <div class="sectionHead">
+            <div class="sectionTitle">حسابك</div>
+          </div>
+          <div class="profileGrid">
+            <div class="pill"><span class="muted">المستخدم:</span> <span id="whoAmI">—</span></div>
+            <div class="pill"><span class="muted">الإيميل:</span> <span id="whoEmail">—</span></div>
+          </div>
+          <div class="muted small" style="margin-top:10px">تعديل الإعدادات من ⚙️</div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Nav -->
+    <nav class="bottomNav glass">
+      <button class="navBtn active" data-page="Home">
+        <span class="navIcon">🏠</span>
+        <span class="navTxt">الرئيسية</span>
+      </button>
+      <button class="navBtn" data-page="Txns">
+        <span class="navIcon">🧾</span>
+        <span class="navTxt">عمليات</span>
+      </button>
+      <button class="navBtn" data-page="Charts">
+        <span class="navIcon">📈</span>
+        <span class="navTxt">رسوم</span>
+      </button>
+      <button class="navBtn" data-page="Profile">
+        <span class="navIcon">👤</span>
+        <span class="navTxt">حساب</span>
+      </button>
+    </nav>
+
   </div>
 
-  <div class="summaryGrid">
-    <div class="sumCard">
-      <div class="muted small">مجموع الصرف</div>
-      <div class="sumVal" id="kpiTotal">0 دج</div>
-    </div>
-    <div class="sumCard">
-      <div class="muted small">الباقي (من الماكس)</div>
-      <div class="sumVal" id="kpiRemain">0 دج</div>
-    </div>
-    <div class="sumCard">
-      <div class="muted small">الماكس</div>
-      <div class="sumVal" id="kpiMax">0 دج</div>
-    </div>
-    <div class="sumCard">
-      <div class="muted small">الراتب</div>
-      <div class="sumVal" id="kpiSalary">0 دج</div>
-    </div>
-  </div>
-
-  <div id="nearAlert" class="alert warn" style="display:none">تنبيه ⚠️ قربت توصل للماكس</div>
-  <div id="stopAlert" class="alert danger" style="display:none">وقف ✋ وصلت/تجاوزت الحد</div>
-
-  <div class="row" style="margin-top:12px;justify-content:flex-start">
-    <button id="btnAdd" class="btn primary">+ إضافة صرف</button>
-  </div>
-</div> <!-- نهاية homeArea -->
-<!-- Add Modal -->
-  <div id="modalBack" class="modalBack">
-    <div class="modal">
+  <!-- Add Modal -->
+  <div id="modalBack" class="modalBack hidden">
+    <div class="modal glass">
       <div class="row">
         <b>إضافة صرف</b>
-        <button id="modalClose" class="btn">إغلاق</button>
+        <button id="modalClose" class="btn mini ghost">إغلاق</button>
       </div>
 
-      <div class="grid" style="margin-top:10px">
+      <div class="grid2" style="margin-top:10px">
         <div>
           <label>التاريخ</label>
           <input id="fDate" type="date">
@@ -233,7 +314,7 @@
         </div>
       </div>
 
-      <div class="grid" style="margin-top:10px">
+      <div class="grid2" style="margin-top:10px">
         <div>
           <label>التصنيف</label>
           <select id="fCat">
@@ -250,34 +331,42 @@
         </div>
       </div>
 
+      <div id="txnMsg" class="notice hidden" style="margin-top:10px"></div>
+
       <div class="row" style="margin-top:12px;justify-content:flex-start">
         <button id="modalSave" class="btn primary">حفظ</button>
-        <button id="modalCancel" class="btn">إلغاء</button>
+        <button id="modalCancel" class="btn ghost">إلغاء</button>
       </div>
-
-      <div class="muted small" style="margin-top:10px">ملاحظة: كلمة السر لازم 6 أحرف أو أكثر.</div>
     </div>
   </div>
 
   <!-- Settings Modal -->
-  <div id="settingsBack" class="modalBack">
-    <div class="modal">
+  <div id="settingsBack" class="modalBack hidden">
+    <div class="modal glass">
       <div class="row">
-        <b>تعديل الراتب/الماكس</b>
-        <button id="settingsClose" class="btn">إغلاق</button>
+        <b>الإعدادات</b>
+        <button id="settingsClose" class="btn mini ghost">إغلاق</button>
       </div>
 
-      <div class="card" style="margin-top:10px">
-        <div class="grid">
+      <div class="glass cardPad" style="margin-top:10px">
+        <div class="grid2">
           <div>
             <label>الراتب الشهري</label>
             <input id="sSalary" inputmode="numeric" placeholder="مثال: 47000">
           </div>
           <div>
-            <label>حد الصرف (الماكس)</label>
+            <label>حد الصرف الشهري (الماكس)</label>
             <input id="sMax" inputmode="numeric" placeholder="مثال: 30000">
           </div>
         </div>
+
+        <div style="margin-top:10px">
+          <label>هدف السنة (مبلغ تجمعه خلال سنة)</label>
+          <input id="sYearGoal" inputmode="numeric" placeholder="مثال: 200000">
+        </div>
+
+        <div id="settingsMsg" class="notice hidden" style="margin-top:10px"></div>
+
         <div class="row" style="margin-top:12px;justify-content:flex-start">
           <button id="settingsSave" class="btn primary">حفظ</button>
         </div>
@@ -286,41 +375,28 @@
   </div>
 
   <!-- Backup Modal -->
-  <div id="backupBack" class="modalBack">
-    <div class="modal">
+  <div id="backupBack" class="modalBack hidden">
+    <div class="modal glass">
       <div class="row">
         <b>نسخ احتياطي</b>
-        <button id="backupClose" class="btn">إغلاق</button>
+        <button id="backupClose" class="btn mini ghost">إغلاق</button>
       </div>
 
-      <div class="card" style="margin-top:10px">
-        <b>1) JSON</b>
-        <div class="muted small">انسخه… وللاسترجاع الصقه واضغط “استيراد”.</div>
-        <textarea id="backupText" rows="10" style="margin-top:10px"></textarea>
-        <div class="row" style="margin-top:10px;justify-content:flex-start">
-          <button id="backupRefresh" class="btn">تحديث النص</button>
-          <button id="backupImport" class="btn primary">استيراد</button>
+      <div class="glass cardPad" style="margin-top:10px">
+        <div class="row" style="justify-content:flex-start">
+          <button id="backupExportJSON" class="btn primary">تصدير JSON</button>
+          <button id="backupExportCSV" class="btn ghost">تصدير CSV</button>
         </div>
-      </div>
-
-      <div class="card" style="margin-top:10px">
-        <b>2) CSV</b>
-        <div class="muted small">ينزّل ملف CSV على جهازك.</div>
-        <div class="row" style="margin-top:10px;justify-content:flex-start">
-          <button id="backupCSV" class="btn primary">تصدير CSV</button>
-        </div>
+        <div id="backupMsg" class="notice hidden" style="margin-top:10px"></div>
       </div>
     </div>
   </div>
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-  <!-- ✅ IMPORTANT: كسر كاش app.js -->
-  <script type="module" src="./app.js?v=2"></script>
+  <script type="module" src="./app.js?v=1"></script>
 
   <script>
-    // PWA register
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("./sw.js").catch(()=>{});
     }
