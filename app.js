@@ -1,6 +1,6 @@
-/* هدفي | MyGoal
-   Tech: Vanilla JS + Firebase Auth + Firestore + Hosting + PWA
-   Online First: لا تخزين مهم في localStorage
+/* MyGoal / kacem-b — Vanilla JS + Firebase Auth + Firestore
+   ✅ Online First: كل شيء في Firestore
+   ✅ متوافق مع index.html الحالي (loginCard/homeArea/... إلخ)
 */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
@@ -17,7 +17,6 @@ import {
   doc,
   getDoc,
   setDoc,
-  updateDoc,
   serverTimestamp,
   collection,
   getDocs,
@@ -28,7 +27,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 /* -----------------------------
-   1) Firebase Config (ضع بياناتك)
+   1) Firebase Config (لازم تعبيها)
 -------------------------------- */
 const firebaseConfig = {
   apiKey: "PUT_YOUR_API_KEY",
@@ -54,6 +53,10 @@ function toInt(n) {
   return Math.max(0, Math.floor(x));
 }
 
+function safeText(s) {
+  return String(s ?? "").trim();
+}
+
 function fmtDZD(n) {
   const v = Number(n) || 0;
   return new Intl.NumberFormat("fr-DZ").format(v) + " دج";
@@ -68,8 +71,7 @@ function nowISODate() {
 }
 
 function monthKeyFromDateISO(dateISO) {
-  // YYYY-MM-DD => YYYY-MM
-  return dateISO.slice(0, 7);
+  return dateISO.slice(0, 7); // YYYY-MM
 }
 
 function firstDayOfMonth(monthKey) {
@@ -85,56 +87,21 @@ function monthNameMaghrebFR(monthKey) {
   return `${names[m - 1]} ${y}`;
 }
 
+function showEl(el, display = "block") {
+  if (!el) return;
+  el.style.display = display;
+}
+function hideEl(el) {
+  if (!el) return;
+  el.style.display = "none";
+}
+
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
 }
 
-function safeText(s) {
-  return String(s ?? "").trim();
-}
-
-function show(el) { el.classList.remove("hidden"); }
-function hide(el) { el.classList.add("hidden"); }
-
-function setNotice(el, msg, tone = "info") {
-  el.className = "notice " + tone;
-  el.textContent = msg;
-  show(el);
-}
-
-function clearNotice(el) {
-  el.textContent = "";
-  hide(el);
-}
-
-function downloadText(filename, text, mime = "text/plain;charset=utf-8") {
-  const blob = new Blob([text], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
 /* -----------------------------
-   3) State (في الذاكرة فقط)
--------------------------------- */
-const state = {
-  user: null,
-  settings: { salary: 0, max: 0, goal: 0, createdAt: null },
-  currentMonth: monthKeyFromDateISO(nowISODate()),
-  currentMonthSummary: { incomeTotal: 0, expenseTotal: 0, net: 0, capUsedPercent: 0, updatedAt: null },
-  currentTxns: [], // loaded month txns
-  dayFilter: null, // YYYY-MM-DD
-  totalsAll: { incomeAll: 0, expenseAll: 0, balanceAll: 0 },
-  installPromptEvent: null
-};
-
-/* -----------------------------
-   4) Firestore Paths
+   3) Firestore Paths
 -------------------------------- */
 function userBase(uid) {
   return `users/${uid}`;
@@ -156,154 +123,114 @@ function txnRef(uid, monthKey, txnId) {
 }
 
 /* -----------------------------
-   5) UI Elements
+   4) UI (IDs من index.html حقك)
 -------------------------------- */
-const el = {
-  splash: $("splash"),
-
-  authView: $("authView"),
-  mainView: $("mainView"),
-  authMsg: $("authMsg"),
-
-  loginEmail: $("loginEmail"),
+const ui = {
+  // auth
+  loginCard: $("loginCard"),
+  loginUser: $("loginUser"),
   loginPass: $("loginPass"),
-  signupEmail: $("signupEmail"),
-  signupPass: $("signupPass"),
   btnLogin: $("btnLogin"),
   btnSignup: $("btnSignup"),
-  btnLogout: $("btnLogout"),
+  loginHint: $("loginHint"),
+
+  // main
+  homeArea: $("homeArea"),
+  whoAmI: $("whoAmI"),
+  monthLabel: $("monthLabel"),
 
   btnInstall: $("btnInstall"),
   btnSettings: $("btnSettings"),
   btnBackup: $("btnBackup"),
+  btnLogout: $("btnLogout"),
 
-  settingsModal: $("settingsModal"),
-  closeSettingsModal: $("closeSettingsModal"),
-  setSalary: $("setSalary"),
-  setMax: $("setMax"),
-  setGoal: $("setGoal"),
-  btnSaveSettings: $("btnSaveSettings"),
-  settingsMsg: $("settingsMsg"),
+  // summary KPI
+  kpiSalary: $("kpiSalary"),
+  kpiMax: $("kpiMax"),
+  kpiTotal: $("kpiTotal"),
+  kpiRemain: $("kpiRemain"),
+  nearAlert: $("nearAlert"),
+  stopAlert: $("stopAlert"),
+  btnAdd: $("btnAdd"),
 
-  monthPickerBtn: $("monthPickerBtn"),
-  monthLabel: $("monthLabel"),
-  monthModal: $("monthModal"),
-  closeMonthModal: $("closeMonthModal"),
-  monthInput: $("monthInput"),
-  btnGoMonth: $("btnGoMonth"),
-  monthQuickList: $("monthQuickList"),
-  btnTodayMonth: $("btnTodayMonth"),
+  // month nav
+  prevMonth: $("prevMonth"),
+  nextMonth: $("nextMonth"),
+  todayBtn: $("todayBtn"),
 
-  totalBalance: $("totalBalance"),
-  monthIncome: $("monthIncome"),
-  monthExpense: $("monthExpense"),
-  monthNet: $("monthNet"),
-  monthUpdated: $("monthUpdated"),
+  // calendar
+  calGrid: $("calGrid"),
+  dayHint: $("dayHint"),
 
-  goalValue: $("goalValue"),
-  goalProgress: $("goalProgress"),
-  goalBar: $("goalBar"),
-  goalPercentChip: $("goalPercentChip"),
-  goalCongrats: $("goalCongrats"),
+  // txns
+  listArea: $("listArea"),
+  searchBox: $("searchBox"),
+  filterCat: $("filterCat"),
 
-  capMax: $("capMax"),
-  capRemaining: $("capRemaining"),
-  capBar: $("capBar"),
-  capChip: $("capChip"),
-  capNotice: $("capNotice"),
+  // add/edit modal
+  modalBack: $("modalBack"),
+  modalClose: $("modalClose"),
+  modalCancel: $("modalCancel"),
+  modalSave: $("modalSave"),
+  fDate: $("fDate"),
+  fAmt: $("fAmt"),
+  fCat: $("fCat"),
+  fDesc: $("fDesc"),
 
-  calendar: $("calendar"),
-  btnClearDayFilter: $("btnClearDayFilter"),
-  dayFilterHint: $("dayFilterHint"),
+  // settings modal
+  settingsBack: $("settingsBack"),
+  settingsClose: $("settingsClose"),
+  settingsSave: $("settingsSave"),
+  sSalary: $("sSalary"),
+  sMax: $("sMax"),
 
-  searchInput: $("searchInput"),
-  sortSelect: $("sortSelect"),
-  btnAddExpense: $("btnAddExpense"),
-  txnList: $("txnList"),
-  emptyTxns: $("emptyTxns"),
+  // backup modal
+  backupBack: $("backupBack"),
+  backupClose: $("backupClose"),
+  backupText: $("backupText"),
+  backupRefresh: $("backupRefresh"),
+  backupImport: $("backupImport"),
+  backupCSV: $("backupCSV"),
 
-  txnModal: $("txnModal"),
-  closeTxnModal: $("closeTxnModal"),
-  txnModalTitle: $("txnModalTitle"),
-  txnDate: $("txnDate"),
-  txnAmount: $("txnAmount"),
-  txnCategory: $("txnCategory"),
-  txnType: $("txnType"),
-  txnDesc: $("txnDesc"),
-  btnSaveTxn: $("btnSaveTxn"),
-  btnDeleteTxn: $("btnDeleteTxn"),
-  txnMsg: $("txnMsg"),
-
-  backupModal: $("backupModal"),
-  closeBackupModal: $("closeBackupModal"),
-  btnExportJSON: $("btnExportJSON"),
-  btnExportCSV: $("btnExportCSV"),
-  importFile: $("importFile"),
-  btnImportJSON: $("btnImportJSON"),
-  btnImportDryRun: $("btnImportDryRun"),
-  backupMsg: $("backupMsg"),
-
-  chart: $("chart")
+  // charts
+  chartCat: $("chartCat"),
+  chartDays: $("chartDays"),
 };
 
 /* -----------------------------
-   6) PWA: Service Worker + Install
+   5) State
 -------------------------------- */
-async function registerSW() {
-  if (!("serviceWorker" in navigator)) return;
-  try {
-    await navigator.serviceWorker.register("./sw.js");
-  } catch (e) {
-    // ما نوقف التطبيق لو فشل
-    console.warn("SW register failed", e);
-  }
-}
+const state = {
+  user: null,
+  settings: { salary: 0, max: 0, goal: 0 },
+  currentMonth: monthKeyFromDateISO(nowISODate()),
+  currentTxns: [],
+  dayFilter: null, // YYYY-MM-DD
+  installPromptEvent: null
+};
 
+let editingTxnId = null; // null => add, otherwise edit
+
+/* -----------------------------
+   6) PWA: Install button
+-------------------------------- */
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   state.installPromptEvent = e;
-  show(el.btnInstall);
+  showEl(ui.btnInstall, "inline-block");
 });
 
-el.btnInstall.addEventListener("click", async () => {
+ui.btnInstall?.addEventListener("click", async () => {
   if (!state.installPromptEvent) return;
   state.installPromptEvent.prompt();
-  try {
-    await state.installPromptEvent.userChoice;
-  } catch {}
+  try { await state.installPromptEvent.userChoice; } catch {}
   state.installPromptEvent = null;
-  hide(el.btnInstall);
+  hideEl(ui.btnInstall);
 });
 
 /* -----------------------------
    7) Auth
 -------------------------------- */
-async function doLogin() {
-  clearNotice(el.authMsg);
-  const email = safeText(el.loginEmail.value);
-  const pass = safeText(el.loginPass.value);
-  if (!email || !pass) return setNotice(el.authMsg, "اكتب البريد وكلمة المرور.", "warn");
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-  } catch (e) {
-    setNotice(el.authMsg, humanAuthError(e), "danger");
-  }
-}
-
-async function doSignup() {
-  clearNotice(el.authMsg);
-  const email = safeText(el.signupEmail.value);
-  const pass = safeText(el.signupPass.value);
-  if (!email || !pass) return setNotice(el.authMsg, "اكتب البريد وكلمة المرور.", "warn");
-  if (pass.length < 8) return setNotice(el.authMsg, "كلمة المرور لازم 8 أحرف أو أكثر.", "warn");
-
-  try {
-    await createUserWithEmailAndPassword(auth, email, pass);
-  } catch (e) {
-    setNotice(el.authMsg, humanAuthError(e), "danger");
-  }
-}
-
 function humanAuthError(e) {
   const code = e?.code || "";
   if (code.includes("auth/invalid-email")) return "البريد غير صحيح.";
@@ -315,42 +242,50 @@ function humanAuthError(e) {
   return "صار خطأ في الدخول/التسجيل.";
 }
 
-el.btnLogin.addEventListener("click", doLogin);
-el.btnSignup.addEventListener("click", doSignup);
+async function doLogin() {
+  ui.loginHint.textContent = "";
+  const email = safeText(ui.loginUser.value);
+  const pass = safeText(ui.loginPass.value);
+  if (!email || !pass) {
+    ui.loginHint.textContent = "اكتب البريد وكلمة المرور.";
+    return;
+  }
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    ui.loginHint.textContent = humanAuthError(e);
+  }
+}
 
-el.btnLogout.addEventListener("click", async () => {
+async function doSignup() {
+  ui.loginHint.textContent = "";
+  const email = safeText(ui.loginUser.value);
+  const pass = safeText(ui.loginPass.value);
+  if (!email || !pass) {
+    ui.loginHint.textContent = "اكتب البريد وكلمة المرور.";
+    return;
+  }
+  // ✅ توافق واجهتك (6+)
+  if (pass.length < 6) {
+    ui.loginHint.textContent = "كلمة المرور لازم 6 أحرف أو أكثر.";
+    return;
+  }
+  try {
+    await createUserWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    ui.loginHint.textContent = humanAuthError(e);
+  }
+}
+
+ui.btnLogin?.addEventListener("click", doLogin);
+ui.btnSignup?.addEventListener("click", doSignup);
+
+ui.btnLogout?.addEventListener("click", async () => {
   await signOut(auth);
 });
 
 /* -----------------------------
-   8) Boot: Auth State
--------------------------------- */
-onAuthStateChanged(auth, async (user) => {
-  state.user = user || null;
-
-  if (!user) {
-    // show auth
-    hide(el.mainView);
-    show(el.authView);
-    hide(el.splash);
-    return;
-  }
-
-  // show main
-  hide(el.authView);
-  show(el.mainView);
-  hide(el.splash);
-
-  // load settings + month
-  await ensureUserSettings();
-  await openMonth(state.currentMonth, { jumpToToday: true });
-
-  // build month quick list
-  renderMonthQuickList();
-});
-
-/* -----------------------------
-   9) User Settings
+   8) Settings (salary/max)
 -------------------------------- */
 async function ensureUserSettings() {
   const uid = state.user.uid;
@@ -358,126 +293,69 @@ async function ensureUserSettings() {
   const snap = await getDoc(ref);
 
   if (!snap.exists()) {
-    const initial = {
-      salary: 0,
-      max: 0,
-      goal: 0,
-      createdAt: serverTimestamp()
-    };
+    const initial = { salary: 0, max: 0, goal: 0, createdAt: serverTimestamp() };
     await setDoc(ref, initial);
-    state.settings = { ...initial, createdAt: new Date() };
+    state.settings.salary = 0;
+    state.settings.max = 0;
+    state.settings.goal = 0;
   } else {
-    const data = snap.data();
-    state.settings = {
-      salary: toInt(data.salary),
-      max: toInt(data.max),
-      goal: toInt(data.goal),
-      createdAt: data.createdAt || null
-    };
+    const d = snap.data() || {};
+    state.settings.salary = toInt(d.salary);
+    state.settings.max = toInt(d.max);
+    state.settings.goal = toInt(d.goal);
   }
 
-  // fill modal fields
-  el.setSalary.value = String(state.settings.salary || "");
-  el.setMax.value = String(state.settings.max || "");
-  el.setGoal.value = String(state.settings.goal || "");
-
-  renderDashboard(); // some parts depend on settings
+  ui.sSalary.value = String(state.settings.salary || "");
+  ui.sMax.value = String(state.settings.max || "");
 }
 
 async function saveSettings() {
-  clearNotice(el.settingsMsg);
   const uid = state.user.uid;
+  const salary = toInt(ui.sSalary.value);
+  const max = toInt(ui.sMax.value);
 
-  const salary = toInt(el.setSalary.value);
-  const max = toInt(el.setMax.value);
-  const goal = toInt(el.setGoal.value);
+  await setDoc(settingsRef(uid), { salary, max }, { merge: true });
+  state.settings.salary = salary;
+  state.settings.max = max;
 
-  try {
-    await setDoc(settingsRef(uid), { salary, max, goal }, { merge: true });
-    state.settings.salary = salary;
-    state.settings.max = max;
-    state.settings.goal = goal;
+  // تأكد من الراتب التلقائي بعد تغيير الراتب
+  await ensureMonthDocAndSalary(uid, state.currentMonth);
+  await refreshMonth(uid, state.currentMonth);
 
-    setNotice(el.settingsMsg, "تم حفظ الإعدادات ✅", "success");
-
-    // salary may affect auto-salary, re-check current month salary
-    await ensureMonthDocAndSalary(uid, state.currentMonth);
-    await refreshMonthData(uid, state.currentMonth);
-    await refreshAllTotals(uid);
-    renderDashboard();
-  } catch (e) {
-    setNotice(el.settingsMsg, "فشل حفظ الإعدادات.", "danger");
-  }
+  hideEl(ui.settingsBack);
 }
 
+ui.btnSettings?.addEventListener("click", async () => {
+  ui.sSalary.value = String(state.settings.salary || "");
+  ui.sMax.value = String(state.settings.max || "");
+  showEl(ui.settingsBack, "flex");
+});
+ui.settingsClose?.addEventListener("click", () => hideEl(ui.settingsBack));
+ui.settingsSave?.addEventListener("click", saveSettings);
+
 /* -----------------------------
-   10) Months: ensure + open + salary
+   9) Months + Salary auto
 -------------------------------- */
 async function ensureMonthDocAndSalary(uid, monthKey) {
-  // Create month doc for existence (optional metadata)
+  // month doc metadata
   await setDoc(monthDocRef(uid, monthKey), { updatedAt: serverTimestamp() }, { merge: true });
 
-  // Salary auto-add: txn id ثابت "salary" يمنع التكرار
+  // salary auto txn with fixed id "salary"
   const salaryAmount = toInt(state.settings.salary);
   if (salaryAmount <= 0) return;
 
-  const salaryTxnId = "salary";
-  const ref = txnRef(uid, monthKey, salaryTxnId);
+  const ref = txnRef(uid, monthKey, "salary");
   const snap = await getDoc(ref);
-  if (snap.exists()) return; // already added
+  if (snap.exists()) return;
 
-  const salaryTxn = {
+  await setDoc(ref, {
     type: "income",
     amount: salaryAmount,
     date: firstDayOfMonth(monthKey),
     category: "راتب",
     desc: "الراتب الشهري (تلقائي)",
     createdAt: serverTimestamp()
-  };
-  await setDoc(ref, salaryTxn);
-}
-
-async function openMonth(monthKey, opts = {}) {
-  const uid = state.user.uid;
-  state.currentMonth = monthKey;
-
-  // ensure month + salary
-  await ensureMonthDocAndSalary(uid, monthKey);
-
-  // refresh month transactions + summary
-  await refreshMonthData(uid, monthKey);
-
-  // refresh global totals (using summaries)
-  await refreshAllTotals(uid);
-
-  // UI
-  el.monthLabel.textContent = monthNameMaghrebFR(monthKey);
-  el.monthInput.value = monthKey;
-
-  if (opts.jumpToToday) {
-    state.dayFilter = null;
-    hide(el.btnClearDayFilter);
-  }
-
-  renderDashboard();
-  renderCalendar();
-  renderTransactions();
-  renderChart();
-}
-
-async function refreshMonthData(uid, monthKey) {
-  // Load txns for this month
-  const q = query(monthTxnsCol(uid, monthKey), orderBy("date", "desc"));
-  const snap = await getDocs(q);
-  state.currentTxns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-  // Recompute summary and store (مخزن وليس محسوب كل مرة من UI)
-  const summary = computeMonthSummary(state.currentTxns);
-  summary.updatedAt = serverTimestamp();
-
-  await setDoc(monthSummaryRef(uid, monthKey), summary, { merge: true });
-
-  state.currentMonthSummary = { ...summary, updatedAt: new Date() };
+  });
 }
 
 function computeMonthSummary(txns) {
@@ -489,7 +367,6 @@ function computeMonthSummary(txns) {
     if (t.type === "expense") expenseTotal += amt;
   }
   const net = incomeTotal - expenseTotal;
-
   const max = toInt(state.settings.max);
   const capUsedPercent = max > 0 ? (expenseTotal / max) * 100 : 0;
 
@@ -497,104 +374,245 @@ function computeMonthSummary(txns) {
     incomeTotal: Math.floor(incomeTotal),
     expenseTotal: Math.floor(expenseTotal),
     net: Math.floor(net),
-    capUsedPercent: Math.round(capUsedPercent * 10) / 10
+    capUsedPercent: Math.round(capUsedPercent * 10) / 10,
+    updatedAt: serverTimestamp()
   };
 }
 
-async function refreshAllTotals(uid) {
-  // Sum all month summaries to get totals across all time
-  // This scales decently; if user has many months, still acceptable for PWA personal.
-  const monthsCol = collection(db, `${userBase(uid)}/months`);
-  const monthsSnap = await getDocs(monthsCol);
+async function refreshMonth(uid, monthKey) {
+  // load txns
+  const qy = query(monthTxnsCol(uid, monthKey), orderBy("date", "desc"));
+  const snap = await getDocs(qy);
+  state.currentTxns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-  let incomeAll = 0;
-  let expenseAll = 0;
+  // store summary
+  const summary = computeMonthSummary(state.currentTxns);
+  await setDoc(monthSummaryRef(uid, monthKey), summary, { merge: true });
 
-  for (const mdoc of monthsSnap.docs) {
-    const monthKey = mdoc.id;
-    const sRef = monthSummaryRef(uid, monthKey);
-    const sSnap = await getDoc(sRef);
-    if (!sSnap.exists()) continue;
-    const s = sSnap.data();
-    incomeAll += Number(s.incomeTotal) || 0;
-    expenseAll += Number(s.expenseTotal) || 0;
+  // render
+  ui.monthLabel.textContent = monthNameMaghrebFR(monthKey);
+  renderSummary(summary);
+  renderCalendar();
+  renderTransactions();
+  renderCharts();
+}
+
+function moveMonth(delta) {
+  const [yy, mm] = state.currentMonth.split("-").map(Number);
+  const d = new Date(yy, mm - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+ui.prevMonth?.addEventListener("click", async () => {
+  const uid = state.user.uid;
+  state.currentMonth = moveMonth(-1);
+  state.dayFilter = null;
+  await ensureMonthDocAndSalary(uid, state.currentMonth);
+  await refreshMonth(uid, state.currentMonth);
+});
+
+ui.nextMonth?.addEventListener("click", async () => {
+  const uid = state.user.uid;
+  state.currentMonth = moveMonth(+1);
+  state.dayFilter = null;
+  await ensureMonthDocAndSalary(uid, state.currentMonth);
+  await refreshMonth(uid, state.currentMonth);
+});
+
+ui.todayBtn?.addEventListener("click", async () => {
+  const uid = state.user.uid;
+  state.currentMonth = monthKeyFromDateISO(nowISODate());
+  state.dayFilter = null;
+  await ensureMonthDocAndSalary(uid, state.currentMonth);
+  await refreshMonth(uid, state.currentMonth);
+});
+
+/* -----------------------------
+   10) Summary UI (kpiSalary/kpiMax/kpiTotal/kpiRemain + alerts)
+-------------------------------- */
+function renderSummary(summary) {
+  const salary = toInt(state.settings.salary);
+  const max = toInt(state.settings.max);
+
+  ui.kpiSalary.textContent = fmtDZD(salary);
+  ui.kpiMax.textContent = fmtDZD(max);
+
+  const expense = Number(summary?.expenseTotal) || 0;
+  ui.kpiTotal.textContent = fmtDZD(expense);
+
+  const remain = max - expense;
+  ui.kpiRemain.textContent = fmtDZD(remain);
+  ui.kpiRemain.style.color = remain < 0 ? "rgba(255,90,90,0.95)" : "";
+
+  // alerts
+  hideEl(ui.nearAlert);
+  hideEl(ui.stopAlert);
+
+  if (max > 0 && expense >= max) {
+    showEl(ui.stopAlert, "block");
+  } else if (max > 0 && expense >= 0.8 * max) {
+    showEl(ui.nearAlert, "block");
   }
-
-  state.totalsAll.incomeAll = Math.floor(incomeAll);
-  state.totalsAll.expenseAll = Math.floor(expenseAll);
-  state.totalsAll.balanceAll = Math.floor(incomeAll - expenseAll);
 }
 
 /* -----------------------------
-   11) Transactions CRUD
+   11) Calendar (calGrid) + day filter
 -------------------------------- */
-let editingTxnId = null;
+function renderCalendar() {
+  const monthKey = state.currentMonth;
+  const [yy, mm] = monthKey.split("-").map(Number);
 
-function openTxnModalAdd() {
-  editingTxnId = null;
-  el.txnModalTitle.textContent = "إضافة صرف";
-  el.txnType.value = "expense";
-  el.txnDate.value = nowISODate().slice(0, 7) === state.currentMonth ? nowISODate() : firstDayOfMonth(state.currentMonth);
-  el.txnAmount.value = "";
-  el.txnCategory.value = "أكل";
-  el.txnDesc.value = "";
-  hide(el.btnDeleteTxn);
-  clearNotice(el.txnMsg);
-  show(el.txnModal);
+  const first = new Date(yy, mm - 1, 1);
+  const last = new Date(yy, mm, 0);
+  const daysInMonth = last.getDate();
+
+  // In your UI: header starts Saturday..Friday
+  // JS getDay(): Sun=0..Sat=6
+  // For Saturday-first grid, shift so Sat=0:
+  const startDay = (first.getDay() + 1) % 7; // Sat=0, Sun=1, ... Fri=6
+
+  // aggregate per day
+  const perDay = new Map();
+  for (const t of state.currentTxns) {
+    const date = t.date;
+    if (!date || !date.startsWith(monthKey)) continue;
+    if (!perDay.has(date)) perDay.set(date, { income: 0, expense: 0 });
+    const agg = perDay.get(date);
+    const amt = Number(t.amount) || 0;
+    if (t.type === "income") agg.income += amt;
+    if (t.type === "expense") agg.expense += amt;
+  }
+
+  ui.calGrid.innerHTML = "";
+
+  // blanks
+  for (let i = 0; i < startDay; i++) {
+    const blank = document.createElement("div");
+    blank.className = "calCell mutedCell";
+    ui.calGrid.appendChild(blank);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateISO = `${monthKey}-${String(d).padStart(2, "0")}`;
+    const cell = document.createElement("div");
+    cell.className = "calCell";
+    if (state.dayFilter === dateISO) cell.classList.add("active");
+
+    const day = document.createElement("div");
+    day.className = "calDay";
+    day.textContent = String(d);
+
+    const sum = document.createElement("div");
+    sum.className = "calSum";
+
+    const agg = perDay.get(dateISO);
+    if (agg) {
+      const exp = Math.floor(agg.expense);
+      const inc = Math.floor(agg.income);
+      if (exp > 0) sum.textContent = `−${new Intl.NumberFormat("fr-DZ").format(exp)}`;
+      else if (inc > 0) sum.textContent = `+${new Intl.NumberFormat("fr-DZ").format(inc)}`;
+      else sum.textContent = "";
+    } else {
+      sum.textContent = "";
+    }
+
+    cell.appendChild(day);
+    cell.appendChild(sum);
+
+    cell.addEventListener("click", () => {
+      state.dayFilter = (state.dayFilter === dateISO) ? null : dateISO;
+      renderCalendar();
+      renderTransactions();
+    });
+
+    ui.calGrid.appendChild(cell);
+  }
+
+  ui.dayHint.textContent = state.dayFilter
+    ? `فلترة اليوم: ${state.dayFilter} (اضغط مرة ثانية لإلغاء)`
+    : "اضغط على يوم لفلترة العمليات";
 }
 
-function openTxnModalEdit(txnId) {
+/* -----------------------------
+   12) Transactions (Add/Edit/Delete) + Search + Category filter
+-------------------------------- */
+function visibleTxns() {
+  let txns = [...state.currentTxns];
+
+  // day filter
+  if (state.dayFilter) {
+    txns = txns.filter(t => t.date === state.dayFilter);
+  }
+
+  // category filter
+  const cat = safeText(ui.filterCat.value);
+  if (cat) {
+    txns = txns.filter(t => (t.category || "") === cat);
+  }
+
+  // search
+  const q = safeText(ui.searchBox.value).toLowerCase();
+  if (q) {
+    txns = txns.filter(t => {
+      const hay = [
+        t.desc, t.category, t.date, String(t.amount ?? "")
+      ].join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  // keep newest first (already from query orderBy desc)
+  return txns;
+}
+
+function openModalAdd() {
+  editingTxnId = null;
+  ui.fDate.value = nowISODate().startsWith(state.currentMonth) ? nowISODate() : firstDayOfMonth(state.currentMonth);
+  ui.fAmt.value = "";
+  ui.fCat.value = "أكل";
+  ui.fDesc.value = "";
+  showEl(ui.modalBack, "flex");
+}
+
+function openModalEdit(txnId) {
   const t = state.currentTxns.find(x => x.id === txnId);
   if (!t) return;
 
-  editingTxnId = txnId;
-  el.txnModalTitle.textContent = (t.type === "income") ? "تفاصيل الدخل" : "تعديل صرف";
-  el.txnType.value = t.type || "expense";
-  el.txnDate.value = t.date || firstDayOfMonth(state.currentMonth);
-  el.txnAmount.value = String(Number(t.amount) || 0);
-  el.txnCategory.value = t.category || "أخرى";
-  el.txnDesc.value = t.desc || "";
-
-  // لا نسمح بتعديل الراتب التلقائي داخل UI (حسب المطلوب)
-  const isSalary = (t.type === "income" && t.category === "راتب" && t.id === "salary");
+  // salary locked
+  const isSalary = (t.id === "salary");
   if (isSalary) {
-    el.txnAmount.disabled = true;
-    el.txnDate.disabled = true;
-    el.txnCategory.disabled = true;
-    el.txnDesc.disabled = true;
-    hide(el.btnDeleteTxn);
-    setNotice(el.txnMsg, "هذا الراتب تلقائي (ما ينعدل من هنا). عدّل الراتب من الإعدادات.", "warn");
-  } else {
-    el.txnAmount.disabled = false;
-    el.txnDate.disabled = false;
-    el.txnCategory.disabled = false;
-    el.txnDesc.disabled = false;
-    show(el.btnDeleteTxn);
-    clearNotice(el.txnMsg);
+    alert("هذا الراتب تلقائي. تعدّل الراتب من (تعديل).");
+    return;
   }
 
-  show(el.txnModal);
+  editingTxnId = txnId;
+  ui.fDate.value = t.date || firstDayOfMonth(state.currentMonth);
+  ui.fAmt.value = String(Number(t.amount) || 0);
+  ui.fCat.value = t.category || "أخرى";
+  ui.fDesc.value = t.desc || "";
+  showEl(ui.modalBack, "flex");
 }
 
-async function saveTxn() {
-  clearNotice(el.txnMsg);
-
+async function saveExpense() {
   const uid = state.user.uid;
   const monthKey = state.currentMonth;
 
-  const date = safeText(el.txnDate.value);
-  const amount = toInt(el.txnAmount.value);
-  const category = safeText(el.txnCategory.value) || "أخرى";
-  const desc = safeText(el.txnDesc.value);
-  const type = "expense"; // UI only expense
+  const date = safeText(ui.fDate.value);
+  const amount = toInt(ui.fAmt.value);
+  const category = safeText(ui.fCat.value) || "أخرى";
+  const desc = safeText(ui.fDesc.value);
 
   if (!date || !date.startsWith(monthKey)) {
-    return setNotice(el.txnMsg, "اختَر تاريخ داخل نفس الشهر المختار.", "warn");
+    alert("اختَر تاريخ داخل نفس الشهر المختار.");
+    return;
   }
-  if (amount <= 0) return setNotice(el.txnMsg, "اكتب مبلغ صحيح أكبر من 0.", "warn");
+  if (amount <= 0) {
+    alert("اكتب مبلغ صحيح أكبر من 0.");
+    return;
+  }
 
   const payload = {
-    type,
+    type: "expense",
     amount,
     date,
     category,
@@ -606,566 +624,320 @@ async function saveTxn() {
     if (!editingTxnId) {
       await addDoc(monthTxnsCol(uid, monthKey), payload);
     } else {
-      // Update via setDoc merge
+      // replace existing by deleting then adding? لا: نخزن بنفس id عبر setDoc
       await setDoc(txnRef(uid, monthKey, editingTxnId), payload, { merge: true });
     }
 
-    // Update month summary (recompute & store)
-    await refreshMonthData(uid, monthKey);
-    await refreshAllTotals(uid);
-
-    // Close modal
-    hide(el.txnModal);
-
-    // Re-render
-    renderDashboard();
-    renderCalendar();
-    renderTransactions();
-    renderChart();
+    hideEl(ui.modalBack);
+    await refreshMonth(uid, monthKey);
   } catch (e) {
-    setNotice(el.txnMsg, "فشل الحفظ. تأكد من الاتصال.", "danger");
+    alert("فشل الحفظ. تأكد من الاتصال.");
   }
 }
 
-async function deleteTxn() {
-  clearNotice(el.txnMsg);
-  if (!editingTxnId) return;
-
+async function deleteExpense(txnId) {
   const uid = state.user.uid;
   const monthKey = state.currentMonth;
 
-  // منع حذف الراتب
-  if (editingTxnId === "salary") {
-    return setNotice(el.txnMsg, "ما تقدر تحذف الراتب التلقائي.", "warn");
+  if (txnId === "salary") {
+    alert("ما تقدر تحذف الراتب التلقائي.");
+    return;
   }
+  const ok = confirm("متأكد تبغى تحذف العملية؟");
+  if (!ok) return;
 
   try {
-    await deleteDoc(txnRef(uid, monthKey, editingTxnId));
-    await refreshMonthData(uid, monthKey);
-    await refreshAllTotals(uid);
-
-    hide(el.txnModal);
-
-    renderDashboard();
-    renderCalendar();
-    renderTransactions();
-    renderChart();
+    await deleteDoc(txnRef(uid, monthKey, txnId));
+    await refreshMonth(uid, monthKey);
   } catch (e) {
-    setNotice(el.txnMsg, "فشل الحذف. تأكد من الاتصال.", "danger");
+    alert("فشل الحذف. تأكد من الاتصال.");
   }
-}
-
-/* -----------------------------
-   12) Dashboard Render
--------------------------------- */
-function renderDashboard() {
-  // total balance
-  el.totalBalance.textContent = fmtDZD(state.totalsAll.balanceAll);
-
-  // month summary
-  const s = state.currentMonthSummary;
-  el.monthIncome.textContent = fmtDZD(s.incomeTotal || 0);
-  el.monthExpense.textContent = fmtDZD(s.expenseTotal || 0);
-
-  const net = Number(s.net) || 0;
-  el.monthNet.textContent = fmtDZD(net);
-  el.monthNet.style.color = net >= 0 ? "var(--good)" : "var(--bad)";
-  el.monthUpdated.textContent = "آخر تحديث: " + new Date().toLocaleString("ar-DZ");
-
-  // Goal progress
-  const goal = toInt(state.settings.goal);
-  const progress = Math.max(0, state.totalsAll.balanceAll);
-  el.goalValue.textContent = fmtDZD(goal);
-  el.goalProgress.textContent = fmtDZD(progress);
-
-  let pct = 0;
-  if (goal > 0) pct = clamp((progress / goal) * 100, 0, 999);
-  const pctShow = (goal > 0) ? (Math.round(pct * 10) / 10) : 0;
-
-  el.goalPercentChip.textContent = (goal > 0) ? `${pctShow}%` : "اضبط الهدف";
-  el.goalBar.style.width = clamp(pct, 0, 100) + "%";
-
-  if (goal > 0 && progress >= goal) {
-    setNotice(el.goalCongrats, "مبروك! وصلت هدفك 100% 🎉🚀", "success");
-  } else {
-    hide(el.goalCongrats);
-  }
-
-  // Cap logic (max monthly spending)
-  const max = toInt(state.settings.max);
-  const expense = Number(s.expenseTotal) || 0;
-
-  el.capMax.textContent = fmtDZD(max);
-  const remaining = max - expense;
-  el.capRemaining.textContent = fmtDZD(remaining);
-  el.capRemaining.style.color = remaining >= 0 ? "var(--text)" : "var(--bad)";
-
-  const capPct = (max > 0) ? clamp((expense / max) * 100, 0, 999) : 0;
-  el.capBar.style.width = clamp(capPct, 0, 100) + "%";
-  el.capChip.textContent = (max > 0) ? `${Math.round(capPct)}%` : "حدد الماكس";
-
-  // Alerts per spec
-  if (max > 0 && expense >= max) {
-    setNotice(el.capNotice, "توقف ✋ وصلت/تجاوزت الحد الشهري", "danger");
-  } else if (max > 0 && expense >= 0.8 * max) {
-    setNotice(el.capNotice, "تنبيه: اقتراب من الحد (80%)", "warn");
-  } else {
-    hide(el.capNotice);
-  }
-}
-
-/* -----------------------------
-   13) Month Picker UI
--------------------------------- */
-function renderMonthQuickList() {
-  // last 12 months quick buttons (including current)
-  el.monthQuickList.innerHTML = "";
-  const base = new Date();
-  const items = [];
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
-    const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    items.push(mk);
-  }
-
-  for (const mk of items) {
-    const btn = document.createElement("button");
-    btn.className = "btn ghost";
-    btn.textContent = monthNameMaghrebFR(mk);
-    btn.addEventListener("click", async () => {
-      hide(el.monthModal);
-      state.dayFilter = null;
-      hide(el.btnClearDayFilter);
-      await openMonth(mk);
-    });
-    el.monthQuickList.appendChild(btn);
-  }
-}
-
-el.monthPickerBtn.addEventListener("click", () => {
-  el.monthInput.value = state.currentMonth;
-  show(el.monthModal);
-});
-$("closeMonthModal").addEventListener("click", () => hide(el.monthModal));
-$("btnGoMonth").addEventListener("click", async () => {
-  const mk = safeText(el.monthInput.value);
-  if (!mk || mk.length !== 7) return;
-  hide(el.monthModal);
-  state.dayFilter = null;
-  hide(el.btnClearDayFilter);
-  await openMonth(mk);
-});
-el.btnTodayMonth.addEventListener("click", async () => {
-  const mk = monthKeyFromDateISO(nowISODate());
-  state.dayFilter = null;
-  hide(el.btnClearDayFilter);
-  await openMonth(mk, { jumpToToday: true });
-});
-
-/* -----------------------------
-   14) Calendar
--------------------------------- */
-function renderCalendar() {
-  const monthKey = state.currentMonth;
-  const [yy, mm] = monthKey.split("-").map(Number);
-  const first = new Date(yy, mm - 1, 1);
-  const last = new Date(yy, mm, 0);
-  const daysInMonth = last.getDate();
-
-  // Start day (Mon-first for nicer Maghreb feel)
-  // JS getDay(): Sun=0..Sat=6
-  const startDay = (first.getDay() + 6) % 7; // shift so Mon=0
-
-  // aggregate totals per day
-  const perDay = new Map(); // date -> {income, expense}
-  for (const t of state.currentTxns) {
-    const date = t.date;
-    if (!date || !date.startsWith(monthKey)) continue;
-    if (!perDay.has(date)) perDay.set(date, { income: 0, expense: 0 });
-    const agg = perDay.get(date);
-    const amt = Number(t.amount) || 0;
-    if (t.type === "income") agg.income += amt;
-    if (t.type === "expense") agg.expense += amt;
-  }
-
-  const weekDays = ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"];
-
-  el.calendar.innerHTML = "";
-  const head = document.createElement("div");
-  head.className = "cal-head";
-  for (const w of weekDays) {
-    const c = document.createElement("div");
-    c.className = "cal-w";
-    c.textContent = w;
-    head.appendChild(c);
-  }
-  el.calendar.appendChild(head);
-
-  const grid = document.createElement("div");
-  grid.className = "cal-grid";
-
-  // blanks
-  for (let i = 0; i < startDay; i++) {
-    const cell = document.createElement("div");
-    cell.className = "cal-cell muted-cell";
-    grid.appendChild(cell);
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateISO = `${monthKey}-${String(d).padStart(2, "0")}`;
-    const cell = document.createElement("button");
-    cell.type = "button";
-    cell.className = "cal-cell";
-    if (state.dayFilter === dateISO) cell.classList.add("selected");
-
-    const top = document.createElement("div");
-    top.className = "cal-day";
-    top.textContent = String(d);
-
-    const badge = document.createElement("div");
-    badge.className = "cal-badge";
-
-    const agg = perDay.get(dateISO);
-    if (agg) {
-      const exp = Math.floor(agg.expense);
-      const inc = Math.floor(agg.income);
-      // show small indicator: prefer expense
-      if (exp > 0) {
-        badge.textContent = `−${new Intl.NumberFormat("fr-DZ").format(exp)}`;
-        badge.classList.add("bad");
-      } else if (inc > 0) {
-        badge.textContent = `+${new Intl.NumberFormat("fr-DZ").format(inc)}`;
-        badge.classList.add("good");
-      }
-    } else {
-      badge.textContent = "";
-    }
-
-    cell.appendChild(top);
-    cell.appendChild(badge);
-
-    cell.addEventListener("click", () => {
-      state.dayFilter = (state.dayFilter === dateISO) ? null : dateISO;
-      if (state.dayFilter) show(el.btnClearDayFilter);
-      else hide(el.btnClearDayFilter);
-
-      renderCalendar();
-      renderTransactions();
-    });
-
-    grid.appendChild(cell);
-  }
-
-  el.calendar.appendChild(grid);
-
-  // hint
-  if (state.dayFilter) {
-    el.dayFilterHint.textContent = `فلتر اليوم: ${state.dayFilter}`;
-  } else {
-    el.dayFilterHint.textContent = "اضغط على يوم لفلترة العمليات";
-  }
-}
-
-el.btnClearDayFilter.addEventListener("click", () => {
-  state.dayFilter = null;
-  hide(el.btnClearDayFilter);
-  renderCalendar();
-  renderTransactions();
-});
-
-/* -----------------------------
-   15) Transactions List (Search + Sort + Filter)
--------------------------------- */
-function getVisibleTxns() {
-  let txns = [...state.currentTxns];
-
-  // apply day filter
-  if (state.dayFilter) {
-    txns = txns.filter(t => t.date === state.dayFilter);
-  }
-
-  // search
-  const q = safeText(el.searchInput.value).toLowerCase();
-  if (q) {
-    txns = txns.filter(t => {
-      const s = [
-        t.desc,
-        t.category,
-        t.date,
-        String(t.amount ?? "")
-      ].join(" ").toLowerCase();
-      return s.includes(q);
-    });
-  }
-
-  // sort
-  const sort = el.sortSelect.value;
-  if (sort === "newest") {
-    txns.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  } else if (sort === "oldest") {
-    txns.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  } else if (sort === "amount_desc") {
-    txns.sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0));
-  } else if (sort === "amount_asc") {
-    txns.sort((a, b) => (Number(a.amount) || 0) - (Number(b.amount) || 0));
-  }
-
-  return txns;
 }
 
 function renderTransactions() {
-  const txns = getVisibleTxns();
-  el.txnList.innerHTML = "";
+  ui.listArea.innerHTML = "";
+
+  const txns = visibleTxns();
 
   if (txns.length === 0) {
-    show(el.emptyTxns);
+    const empty = document.createElement("div");
+    empty.className = "muted small";
+    empty.textContent = "ما فيه عمليات (حسب الفلاتر الحالية).";
+    ui.listArea.appendChild(empty);
     return;
   }
-  hide(el.emptyTxns);
 
   for (const t of txns) {
-    const row = document.createElement("div");
-    row.className = "txn";
-
-    const left = document.createElement("div");
-    left.className = "txn-left";
-
-    const title = document.createElement("div");
-    title.className = "txn-title";
-    title.textContent = t.desc ? t.desc : (t.type === "income" ? "دخل" : "صرف");
+    const item = document.createElement("div");
+    item.className = "item";
 
     const meta = document.createElement("div");
-    meta.className = "txn-meta";
-    meta.textContent = `${t.date || ""} • ${t.category || "—"}`;
+    meta.className = "meta";
 
-    left.appendChild(title);
-    left.appendChild(meta);
+    const title = document.createElement("div");
+    title.style.fontWeight = "900";
+    title.textContent = t.desc || (t.type === "income" ? "دخل" : "صرف");
+
+    const sub = document.createElement("div");
+    sub.className = "desc";
+    sub.textContent = `${t.date || ""} • ${t.category || "—"}`;
+
+    meta.appendChild(title);
+    meta.appendChild(sub);
 
     const right = document.createElement("div");
-    right.className = "txn-right";
+    right.style.display = "flex";
+    right.style.gap = "8px";
+    right.style.alignItems = "center";
 
     const amt = document.createElement("div");
-    const sign = (t.type === "income") ? "+" : "−";
-    amt.className = "txn-amt " + (t.type === "income" ? "good" : "bad");
+    amt.style.fontWeight = "900";
+    const sign = t.type === "income" ? "+" : "−";
     amt.textContent = `${sign}${new Intl.NumberFormat("fr-DZ").format(Number(t.amount) || 0)} دج`;
+    amt.style.color = t.type === "income" ? "rgba(56,214,166,0.95)" : "rgba(255,90,90,0.95)";
 
-    const btn = document.createElement("button");
-    btn.className = "btn mini ghost";
-    btn.textContent = "تفاصيل";
-    btn.addEventListener("click", () => openTxnModalEdit(t.id));
+    const btnEdit = document.createElement("button");
+    btnEdit.className = "btn small";
+    btnEdit.textContent = "تعديل";
+    btnEdit.disabled = (t.id === "salary"); // salary locked
+    btnEdit.addEventListener("click", () => openModalEdit(t.id));
+
+    const btnDel = document.createElement("button");
+    btnDel.className = "btn danger small";
+    btnDel.textContent = "حذف";
+    btnDel.disabled = (t.id === "salary");
+    btnDel.addEventListener("click", () => deleteExpense(t.id));
 
     right.appendChild(amt);
-    right.appendChild(btn);
+    right.appendChild(btnEdit);
+    right.appendChild(btnDel);
 
-    row.appendChild(left);
-    row.appendChild(right);
+    item.appendChild(meta);
+    item.appendChild(right);
 
-    el.txnList.appendChild(row);
+    ui.listArea.appendChild(item);
   }
 }
 
-el.searchInput.addEventListener("input", () => renderTransactions());
-el.sortSelect.addEventListener("change", () => renderTransactions());
+ui.searchBox?.addEventListener("input", renderTransactions);
+ui.filterCat?.addEventListener("change", renderTransactions);
+
+ui.btnAdd?.addEventListener("click", openModalAdd);
+ui.modalClose?.addEventListener("click", () => hideEl(ui.modalBack));
+ui.modalCancel?.addEventListener("click", () => hideEl(ui.modalBack));
+ui.modalSave?.addEventListener("click", saveExpense);
 
 /* -----------------------------
-   16) Chart: Expense by Category (Canvas)
+   13) Charts (Canvas) — حسب التصنيف + حسب الأيام
 -------------------------------- */
-function renderChart() {
-  const canvas = el.chart;
-  const ctx = canvas.getContext("2d");
+function renderCharts() {
+  renderChartByCategory();
+  renderChartByDays();
+}
 
-  // handle retina
+function setupCanvas(canvas) {
+  if (!canvas) return null;
+  const ctx = canvas.getContext("2d");
   const dpr = window.devicePixelRatio || 1;
-  const cssW = canvas.clientWidth || 800;
-  const cssH = canvas.clientHeight || 420;
+  const cssW = canvas.clientWidth || canvas.parentElement?.clientWidth || 600;
+  const cssH = canvas.height ? canvas.height : 220;
+
+  // keep CSS height from attribute, width from layout
+  canvas.style.width = cssW + "px";
+  canvas.style.height = cssH + "px";
   canvas.width = Math.floor(cssW * dpr);
   canvas.height = Math.floor(cssH * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  // data (only expenses)
+  return { ctx, w: cssW, h: cssH };
+}
+
+function renderChartByCategory() {
+  const pack = setupCanvas(ui.chartCat);
+  if (!pack) return;
+  const { ctx, w, h } = pack;
+
   const txns = state.currentTxns.filter(t => t.type === "expense");
-  const agg = new Map(); // cat -> total
+  const agg = new Map();
   for (const t of txns) {
     const cat = t.category || "أخرى";
-    const amt = Number(t.amount) || 0;
-    agg.set(cat, (agg.get(cat) || 0) + amt);
+    agg.set(cat, (agg.get(cat) || 0) + (Number(t.amount) || 0));
   }
+  const data = [...agg.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
 
-  const entries = [...agg.entries()].sort((a, b) => b[1] - a[1]);
-  const maxBars = 6;
-  const data = entries.slice(0, maxBars);
+  ctx.clearRect(0, 0, w, h);
 
-  // clear
-  ctx.clearRect(0, 0, cssW, cssH);
-
-  // background grid
-  ctx.globalAlpha = 0.25;
-  ctx.beginPath();
-  for (let y = 40; y < cssH; y += 40) {
-    ctx.moveTo(20, y);
-    ctx.lineTo(cssW - 20, y);
-  }
-  ctx.strokeStyle = "rgba(255,255,255,0.25)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // empty
   if (data.length === 0) {
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.font = "16px system-ui";
-    ctx.fillText("ما فيه صرف كفاية لرسم الرسم البياني.", 20, 40);
+    ctx.fillStyle = "rgba(233,239,255,0.85)";
+    ctx.font = "14px system-ui";
+    ctx.fillText("ما فيه صرف كفاية للرسم.", 14, 28);
     return;
   }
 
+  const pad = 14;
   const maxVal = Math.max(...data.map(x => x[1]), 1);
+  const barH = 18;
+  const gap = 14;
+  let y = pad + 18;
 
-  const pad = 20;
-  const chartW = cssW - pad * 2;
-  const chartH = cssH - pad * 2 - 30;
-
-  const barH = Math.max(18, Math.floor(chartH / (data.length * 1.3)));
-  const gap = Math.floor(barH * 0.45);
-
-  ctx.font = "14px system-ui";
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-
-  let y = pad + 20;
+  ctx.font = "12px system-ui";
   for (const [cat, val] of data) {
-    const w = Math.floor((val / maxVal) * (chartW * 0.72));
+    const bw = Math.floor((val / maxVal) * (w - pad * 2 - 110));
     // bar
-    ctx.fillStyle = "rgba(124, 92, 255, 0.75)";
-    ctx.fillRect(pad, y, w, barH);
+    ctx.fillStyle = "rgba(124,92,255,0.75)";
+    ctx.fillRect(pad, y, bw, barH);
 
-    // labels
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.fillText(cat, pad, y - 6);
+    // label
+    ctx.fillStyle = "rgba(233,239,255,0.92)";
+    ctx.fillText(cat, pad, y - 4);
 
-    const text = `−${new Intl.NumberFormat("fr-DZ").format(Math.floor(val))} دج`;
-    ctx.fillText(text, pad + w + 10, y + Math.floor(barH * 0.72));
+    // value
+    ctx.fillStyle = "rgba(233,239,255,0.85)";
+    ctx.fillText(`−${new Intl.NumberFormat("fr-DZ").format(Math.floor(val))}`, pad + bw + 10, y + 13);
 
     y += barH + gap;
+    if (y > h - pad) break;
+  }
+}
+
+function renderChartByDays() {
+  const pack = setupCanvas(ui.chartDays);
+  if (!pack) return;
+  const { ctx, w, h } = pack;
+
+  const monthKey = state.currentMonth;
+  const map = new Map(); // day -> total expense
+  for (const t of state.currentTxns) {
+    if (t.type !== "expense") continue;
+    const d = t.date;
+    if (!d || !d.startsWith(monthKey)) continue;
+    map.set(d, (map.get(d) || 0) + (Number(t.amount) || 0));
+  }
+
+  const entries = [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  // show last 10 active days or first 10 if many
+  const data = entries.slice(-10);
+
+  ctx.clearRect(0, 0, w, h);
+
+  if (data.length === 0) {
+    ctx.fillStyle = "rgba(233,239,255,0.85)";
+    ctx.font = "14px system-ui";
+    ctx.fillText("ما فيه صرف كفاية للرسم.", 14, 28);
+    return;
+  }
+
+  const pad = 16;
+  const maxVal = Math.max(...data.map(x => x[1]), 1);
+
+  // axes baseline
+  ctx.strokeStyle = "rgba(255,255,255,0.18)";
+  ctx.beginPath();
+  ctx.moveTo(pad, h - pad);
+  ctx.lineTo(w - pad, h - pad);
+  ctx.stroke();
+
+  const barW = Math.max(10, Math.floor((w - pad * 2) / (data.length * 1.6)));
+  const gap = Math.floor(barW * 0.6);
+
+  let x = pad;
+  ctx.font = "10px system-ui";
+
+  for (const [date, val] of data) {
+    const bh = Math.floor((val / maxVal) * (h - pad * 2 - 18));
+    ctx.fillStyle = "rgba(56,214,166,0.70)";
+    ctx.fillRect(x, (h - pad) - bh, barW, bh);
+
+    ctx.fillStyle = "rgba(233,239,255,0.70)";
+    const dd = date.slice(8, 10);
+    ctx.fillText(dd, x, h - 6);
+
+    x += barW + gap;
+    if (x > w - pad) break;
   }
 }
 
 /* -----------------------------
-   17) Backup: Export/Import JSON + Export CSV
+   14) Backup (textarea JSON) + CSV
 -------------------------------- */
-async function exportJSON() {
-  clearNotice(el.backupMsg);
-  const uid = state.user.uid;
+async function buildBackupPayload(uid) {
+  const sSnap = await getDoc(settingsRef(uid));
+  const settings = sSnap.exists() ? sSnap.data() : {};
 
-  try {
-    // settings
-    const sSnap = await getDoc(settingsRef(uid));
-    const settings = sSnap.exists() ? sSnap.data() : {};
+  const monthsCol = collection(db, `${userBase(uid)}/months`);
+  const monthsSnap = await getDocs(monthsCol);
 
-    // months list
-    const monthsCol = collection(db, `${userBase(uid)}/months`);
-    const monthsSnap = await getDocs(monthsCol);
+  const months = {};
+  for (const m of monthsSnap.docs) {
+    const mk = m.id;
 
-    const months = {};
-    for (const m of monthsSnap.docs) {
-      const mk = m.id;
+    const sumSnap = await getDoc(monthSummaryRef(uid, mk));
+    const summary = sumSnap.exists() ? sumSnap.data() : null;
 
-      const sumSnap = await getDoc(monthSummaryRef(uid, mk));
-      const summary = sumSnap.exists() ? sumSnap.data() : null;
+    const txSnap = await getDocs(query(monthTxnsCol(uid, mk), orderBy("date", "asc")));
+    const transactions = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      const txSnap = await getDocs(query(monthTxnsCol(uid, mk), orderBy("date", "asc")));
-      const txns = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      months[mk] = { summary, transactions: txns };
-    }
-
-    const payload = {
-      app: "MyGoal",
-      exportedAt: new Date().toISOString(),
-      settings,
-      months
-    };
-
-    downloadText(`mygoal-backup-${uid}-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
-    setNotice(el.backupMsg, "تم تصدير JSON ✅", "success");
-  } catch (e) {
-    setNotice(el.backupMsg, "فشل التصدير. تأكد من الاتصال.", "danger");
+    months[mk] = { summary, transactions };
   }
+
+  return {
+    app: "MyGoal",
+    exportedAt: new Date().toISOString(),
+    settings,
+    months
+  };
 }
 
-function exportCSVCurrentMonth() {
-  const monthKey = state.currentMonth;
+ui.btnBackup?.addEventListener("click", async () => {
+  showEl(ui.backupBack, "flex");
+  // حضّر النص مباشرة
+  try {
+    const payload = await buildBackupPayload(state.user.uid);
+    ui.backupText.value = JSON.stringify(payload, null, 2);
+  } catch {
+    ui.backupText.value = "فشل تحميل البيانات. تأكد من الاتصال.";
+  }
+});
+
+ui.backupClose?.addEventListener("click", () => hideEl(ui.backupBack));
+
+ui.backupRefresh?.addEventListener("click", async () => {
+  try {
+    const payload = await buildBackupPayload(state.user.uid);
+    ui.backupText.value = JSON.stringify(payload, null, 2);
+  } catch {
+    ui.backupText.value = "فشل تحميل البيانات. تأكد من الاتصال.";
+  }
+});
+
+ui.backupCSV?.addEventListener("click", () => {
+  const mk = state.currentMonth;
   const rows = [["id","type","amount","date","category","desc"]];
-
   for (const t of state.currentTxns) {
-    rows.push([
-      t.id,
-      t.type,
-      String(Number(t.amount) || 0),
-      t.date || "",
-      (t.category || "").replaceAll('"', '""'),
-      (t.desc || "").replaceAll('"', '""')
-    ]);
+    rows.push([t.id, t.type, String(Number(t.amount) || 0), t.date || "", t.category || "", (t.desc || "").replaceAll('"','""')]);
   }
-
   const csv = rows.map(r => r.map(x => `"${String(x ?? "")}"`).join(",")).join("\n");
-  downloadText(`mygoal-${monthKey}.csv`, csv, "text/csv;charset=utf-8");
-}
+  downloadText(`mygoal-${mk}.csv`, csv, "text/csv;charset=utf-8");
+});
 
-function readImportFile() {
-  const f = el.importFile.files?.[0];
-  if (!f) return null;
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const obj = JSON.parse(String(reader.result || "{}"));
-        resolve(obj);
-      } catch (e) {
-        reject(new Error("JSON_PARSE"));
-      }
-    };
-    reader.onerror = () => reject(new Error("FILE_READ"));
-    reader.readAsText(f, "utf-8");
-  });
-}
-
-function validateBackup(obj) {
-  if (!obj || typeof obj !== "object") return "الملف غير صالح.";
-  if (obj.app !== "MyGoal") return "هذا الملف مو ملف MyGoal.";
-  if (!obj.months || typeof obj.months !== "object") return "الملف ناقص (months).";
-  return null;
-}
-
-async function importJSON({ dryRun = false } = {}) {
-  clearNotice(el.backupMsg);
-
+ui.backupImport?.addEventListener("click", async () => {
+  const text = safeText(ui.backupText.value);
+  if (!text) return alert("الصق JSON أول.");
   let obj;
-  try {
-    obj = await readImportFile();
-  } catch (e) {
-    return setNotice(el.backupMsg, "ما قدرت أقرأ الملف أو JSON مو صحيح.", "danger");
-  }
-
-  const err = validateBackup(obj);
-  if (err) return setNotice(el.backupMsg, err, "danger");
-
-  if (dryRun) {
-    const monthsCount = Object.keys(obj.months).length;
-    return setNotice(el.backupMsg, `✅ الملف سليم. عدد الشهور داخل النسخة: ${monthsCount}`, "success");
-  }
+  try { obj = JSON.parse(text); } catch { return alert("JSON مو صحيح."); }
+  if (!obj || obj.app !== "MyGoal" || !obj.months) return alert("هذا مو ملف MyGoal.");
 
   const uid = state.user.uid;
 
   try {
     // settings
-    if (obj.settings && typeof obj.settings === "object") {
-      const salary = toInt(obj.settings.salary);
-      const max = toInt(obj.settings.max);
-      const goal = toInt(obj.settings.goal);
-      await setDoc(settingsRef(uid), { salary, max, goal }, { merge: true });
-      state.settings.salary = salary;
-      state.settings.max = max;
-      state.settings.goal = goal;
-    }
+    const salary = toInt(obj.settings?.salary);
+    const max = toInt(obj.settings?.max);
+    const goal = toInt(obj.settings?.goal);
+    await setDoc(settingsRef(uid), { salary, max, goal }, { merge: true });
+    state.settings.salary = salary;
+    state.settings.max = max;
+    state.settings.goal = goal;
 
     // months
     for (const [mk, data] of Object.entries(obj.months)) {
@@ -1173,7 +945,6 @@ async function importJSON({ dryRun = false } = {}) {
 
       await setDoc(monthDocRef(uid, mk), { updatedAt: serverTimestamp() }, { merge: true });
 
-      // transactions
       const txns = Array.isArray(data?.transactions) ? data.transactions : [];
       for (const t of txns) {
         const id = safeText(t.id);
@@ -1189,69 +960,84 @@ async function importJSON({ dryRun = false } = {}) {
         await setDoc(txnRef(uid, mk, id), payload, { merge: true });
       }
 
-      // summary (recompute to be consistent)
-      // load month txns and recompute
-      const q = query(monthTxnsCol(uid, mk), orderBy("date", "desc"));
-      const snap = await getDocs(q);
+      // recompute summary
+      const qy = query(monthTxnsCol(uid, mk), orderBy("date", "desc"));
+      const snap = await getDocs(qy);
       const txNow = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const summary = computeMonthSummary(txNow);
-      summary.updatedAt = serverTimestamp();
       await setDoc(monthSummaryRef(uid, mk), summary, { merge: true });
     }
 
-    setNotice(el.backupMsg, "تم الاستيراد ✅", "success");
+    // refresh current
+    ui.sSalary.value = String(state.settings.salary || "");
+    ui.sMax.value = String(state.settings.max || "");
 
-    // reload current context
-    await ensureUserSettings();
-    await openMonth(state.currentMonth, { jumpToToday: false });
+    await ensureMonthDocAndSalary(uid, state.currentMonth);
+    await refreshMonth(uid, state.currentMonth);
+
+    alert("تم الاستيراد ✅");
   } catch (e) {
-    setNotice(el.backupMsg, "فشل الاستيراد. تأكد من الاتصال.", "danger");
+    alert("فشل الاستيراد. تأكد من الاتصال.");
   }
+});
+
+/* -----------------------------
+   15) download helper
+-------------------------------- */
+function downloadText(filename, text, mime = "text/plain;charset=utf-8") {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 /* -----------------------------
-   18) Modals + Buttons
+   16) Auth State Boot
 -------------------------------- */
-function setupModalClose(modalEl, closeBtnEl) {
-  const backdrop = modalEl.querySelector(".modal-backdrop");
-  backdrop.addEventListener("click", () => hide(modalEl));
-  closeBtnEl.addEventListener("click", () => hide(modalEl));
+function setLoggedOutUI() {
+  showEl(ui.loginCard, "block");
+  hideEl(ui.homeArea);
+
+  hideEl(ui.btnLogout);
+  hideEl(ui.btnSettings);
+  hideEl(ui.btnBackup);
+
+  ui.whoAmI.textContent = "";
+  ui.loginHint.textContent = "";
 }
 
-setupModalClose(el.settingsModal, el.closeSettingsModal);
-setupModalClose(el.monthModal, el.closeMonthModal);
-setupModalClose(el.txnModal, el.closeTxnModal);
-setupModalClose(el.backupModal, el.closeBackupModal);
+function setLoggedInUI(user) {
+  hideEl(ui.loginCard);
+  showEl(ui.homeArea, "flex"); // homeArea عندك flex-direction بالستايل inline
 
-el.btnSettings.addEventListener("click", () => {
-  clearNotice(el.settingsMsg);
-  el.setSalary.value = String(state.settings.salary || "");
-  el.setMax.value = String(state.settings.max || "");
-  el.setGoal.value = String(state.settings.goal || "");
-  show(el.settingsModal);
+  showEl(ui.btnLogout, "inline-block");
+  showEl(ui.btnSettings, "inline-block");
+  showEl(ui.btnBackup, "inline-block");
+
+  ui.whoAmI.textContent = user.email || user.uid;
+}
+
+onAuthStateChanged(auth, async (user) => {
+  state.user = user || null;
+
+  if (!user) {
+    setLoggedOutUI();
+    return;
+  }
+
+  setLoggedInUI(user);
+
+  await ensureUserSettings();
+
+  // month label + data
+  state.currentMonth = monthKeyFromDateISO(nowISODate());
+  await ensureMonthDocAndSalary(user.uid, state.currentMonth);
+  await refreshMonth(user.uid, state.currentMonth);
 });
 
-el.btnSaveSettings.addEventListener("click", saveSettings);
-
-el.btnAddExpense.addEventListener("click", openTxnModalAdd);
-el.btnSaveTxn.addEventListener("click", saveTxn);
-el.btnDeleteTxn.addEventListener("click", deleteTxn);
-
-el.btnBackup.addEventListener("click", () => {
-  clearNotice(el.backupMsg);
-  el.importFile.value = "";
-  show(el.backupModal);
-});
-
-el.btnExportJSON.addEventListener("click", exportJSON);
-el.btnExportCSV.addEventListener("click", exportCSVCurrentMonth);
-el.btnImportDryRun.addEventListener("click", () => importJSON({ dryRun: true }));
-el.btnImportJSON.addEventListener("click", () => importJSON({ dryRun: false }));
-
-/* -----------------------------
-   19) Initial
--------------------------------- */
-await registerSW();
-
-// in case already logged in, UI will switch via onAuthStateChanged
-// keep splash for a short moment (no timers required)
+// ملاحظة: service worker يتسجل من index.html عندك بالفعل
