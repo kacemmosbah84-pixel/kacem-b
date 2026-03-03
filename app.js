@@ -1031,7 +1031,17 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   setLoggedInUI(user);
+// === تحديث اسم المستخدم في الصفحة الرئيسية ===
+const helloNameEl = document.getElementById("helloName");
 
+if (helloNameEl) {
+  const displayName =
+    user.displayName ||
+    (user.email ? user.email.split("@")[0] : null) ||
+    "مستخدم";
+
+  helloNameEl.textContent = displayName;
+}
   await ensureUserSettings();
 
   // month label + data

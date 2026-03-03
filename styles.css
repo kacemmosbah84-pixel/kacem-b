@@ -15,6 +15,11 @@
 
   --shadow: 0 25px 60px rgba(0,0,0,.5);
   --radius: 18px;
+  /* توافق مع الستايل الموجود داخل index.html */
+--bd: var(--stroke);
+--pri: rgba(30,144,255,.22);
+--pri2: rgba(30,144,255,.38);
+--danger: rgba(255,77,109,.18);
 }
 
 *{ box-sizing:border-box; }
