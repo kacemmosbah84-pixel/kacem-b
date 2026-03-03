@@ -103,96 +103,118 @@
     <!-- Home -->
     <!-- ✅ كان عندك display:none;display:flex; وهذا غلط - خليناه بس none -->
     <div id="homeArea" style="display:none;flex-direction:column;gap:12px">
+<!-- ====== HOME (Main Page) ====== -->
+<div class="homeHero glass">
+  <div class="heroTop">
+    <div class="heroLogo" aria-hidden="true">
+      <!-- أيقونة بسيطة (تقدر تغيرها لاحقاً) -->
+      <svg viewBox="0 0 24 24" class="heroLogoSvg">
+        <path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" fill="currentColor" opacity=".18"/>
+        <path d="M9.2 12.2l1.8 1.8 3.9-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
 
-      <div class="card">
-        <div class="row">
-          <div class="pill"><span class="muted">المستخدم:</span> <span id="whoAmI"></span></div>
-          <div class="pill"><span class="muted">الشهر:</span> <span id="monthLabel"></span></div>
-        </div>
+    <div class="heroTxt">
+      <div class="heroTitle">
+        <span>مرحباً، </span><span id="helloName">...</span>
       </div>
+      <div class="heroSub">رحلة هدفك السنوي</div>
+    </div>
 
-      <div class="card">
-        <b>الملخص</b>
-        <div class="grid" style="margin-top:10px">
-          <div class="kpi"><span class="muted">الراتب</span><b id="kpiSalary">0</b></div>
-          <div class="kpi"><span class="muted">الماكس</span><b id="kpiMax">0</b></div>
-          <div class="kpi"><span class="muted">مجموع الشهر</span><b id="kpiTotal">0</b></div>
-          <div class="kpi"><span class="muted">الباقي (من الماكس)</span><b id="kpiRemain">0</b></div>
-        </div>
-        <div id="nearAlert" class="alert warn" style="display:none">تنبيه ⚠️ قربت توصل للماكس</div>
-        <div id="stopAlert" class="alert danger" style="display:none">وقف ✋ وصلت/تجاوزت الحد</div>
+    <button id="btnSettings" class="btn mini ghost" style="display:none">⚙️</button>
+  </div>
 
-        <div class="row" style="margin-top:12px;justify-content:flex-start">
-          <button id="btnAdd" class="btn primary">+ إضافة صرف</button>
-        </div>
+  <!-- كرت الهدف السنوي -->
+  <div class="goalCard">
+    <div class="goalMeta">
+      <div class="goalPct">
+        <span class="chip green" id="goalPctChip">0%</span>
+        <span class="chip" id="goalStageChip">بداية قوية</span>
       </div>
+      <div class="goalBig" id="goalNowBig">0 دج</div>
+    </div>
 
-      <div class="card">
-        <div class="calHead">
-          <b>تقويم الشهر</b>
-          <div class="row" style="justify-content:flex-start">
-            <button id="prevMonth" class="btn small">◀</button>
-            <button id="todayBtn" class="btn small">اليوم</button>
-            <button id="nextMonth" class="btn small">▶</button>
-          </div>
-        </div>
+    <div class="barOuter" aria-label="شريط تقدم الهدف">
+      <div class="barInner" id="goalBarMain" style="width:0%"></div>
+    </div>
 
-        <div class="calGrid" id="calDow">
-          <div class="calDow">السبت</div>
-          <div class="calDow">الأحد</div>
-          <div class="calDow">الاثنين</div>
-          <div class="calDow">الثلاثاء</div>
-          <div class="calDow">الأربعاء</div>
-          <div class="calDow">الخميس</div>
-          <div class="calDow">الجمعة</div>
-        </div>
-
-        <div class="calGrid" id="calGrid"></div>
-        <div class="muted small" style="margin-top:10px" id="dayHint"></div>
+    <div class="goalFoot">
+      <div class="goalFootItem">
+        <div class="muted small">المتبقي</div>
+        <div class="goalFootVal" id="goalRemain">0 دج</div>
       </div>
-
-      <div class="card">
-        <b>رسوم بيانية</b>
-        <div class="grid" style="margin-top:10px">
-          <div class="card" style="margin:0">
-            <div class="muted small">حسب التصنيف</div>
-            <canvas id="chartCat" height="220"></canvas>
-          </div>
-          <div class="card" style="margin:0">
-            <div class="muted small">حسب الأيام</div>
-            <canvas id="chartDays" height="220"></canvas>
-          </div>
-        </div>
+      <div class="goalFootItem">
+        <div class="muted small">باقي</div>
+        <div class="goalFootVal" id="goalDaysLeft">— يوم</div>
       </div>
-
-      <div class="card">
-        <b>العمليات</b>
-
-        <div class="grid" style="margin-top:10px">
-          <div>
-            <label>بحث</label>
-            <input id="searchBox" placeholder="ابحث بالوصف/المبلغ/التاريخ/التصنيف">
-          </div>
-          <div>
-            <label>فلتر التصنيف</label>
-            <select id="filterCat">
-              <option value="">الكل</option>
-              <option value="أكل">أكل</option>
-              <option value="بنزين">بنزين</option>
-              <option value="فواتير">فواتير</option>
-              <option value="تسوق">تسوق</option>
-              <option value="أخرى">أخرى</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="listArea" style="display:flex;flex-direction:column;gap:10px;margin-top:12px"></div>
+      <div class="goalFootItem">
+        <div class="muted small">المعدل اليومي</div>
+        <div class="goalFootVal" id="goalDailyNeed">0 دج</div>
       </div>
+    </div>
 
+    <div class="motivation" id="goalMotivation">🔥 يلا نبدأ… كل دج يقربك!</div>
+  </div>
+</div>
+
+<!-- أهداف صغيرة (اختياري) -->
+<div class="card glass">
+  <div class="sectionHead">
+    <div class="sectionTitle">أهدافك</div>
+    <div class="muted small">اختياري</div>
+  </div>
+
+  <div class="miniGoals">
+    <div class="miniGoal">
+      <div class="miniIcon" aria-hidden="true">🏠</div>
+      <div class="miniBody">
+        <div class="miniTop">
+          <div class="miniName">هدف إضافي</div>
+          <div class="miniPct" id="miniGoalPct">0%</div>
+        </div>
+        <div class="miniBarOuter">
+          <div class="miniBarInner" id="miniGoalBar" style="width:0%"></div>
+        </div>
+        <div class="miniMeta muted small"><span id="miniGoalNow">0</span> / <span id="miniGoalTarget">0</span> دج</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ملخص الشهر -->
+<div class="card glass">
+  <div class="sectionHead">
+    <div class="sectionTitle">ملخص هذا الشهر</div>
+    <div class="pill"><span class="muted">الشهر:</span> <span id="monthLabel">—</span></div>
+  </div>
+
+  <div class="summaryGrid">
+    <div class="sumCard">
+      <div class="muted small">مجموع الصرف</div>
+      <div class="sumVal" id="kpiTotal">0 دج</div>
+    </div>
+    <div class="sumCard">
+      <div class="muted small">الباقي (من الماكس)</div>
+      <div class="sumVal" id="kpiRemain">0 دج</div>
+    </div>
+    <div class="sumCard">
+      <div class="muted small">الماكس</div>
+      <div class="sumVal" id="kpiMax">0 دج</div>
+    </div>
+    <div class="sumCard">
+      <div class="muted small">الراتب</div>
+      <div class="sumVal" id="kpiSalary">0 دج</div>
     </div>
   </div>
 
-  <!-- Add Modal -->
+  <div id="nearAlert" class="alert warn" style="display:none">تنبيه ⚠️ قربت توصل للماكس</div>
+  <div id="stopAlert" class="alert danger" style="display:none">وقف ✋ وصلت/تجاوزت الحد</div>
+
+  <div class="row" style="margin-top:12px;justify-content:flex-start">
+    <button id="btnAdd" class="btn primary">+ إضافة صرف</button>
+  </div>
+</div> <!-- نهاية homeArea -->
+<!-- Add Modal -->
   <div id="modalBack" class="modalBack">
     <div class="modal">
       <div class="row">
