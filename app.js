@@ -30,12 +30,12 @@ import {
    1) Firebase Config (لازم تعبيها)
 -------------------------------- */
 const firebaseConfig = {
-  apiKey: "PUT_YOUR_API_KEY",
-  authDomain: "PUT_YOUR_AUTH_DOMAIN",
-  projectId: "PUT_YOUR_PROJECT_ID",
-  storageBucket: "PUT_YOUR_STORAGE_BUCKET",
-  messagingSenderId: "PUT_YOUR_SENDER_ID",
-  appId: "PUT_YOUR_APP_ID"
+  apiKey: "AIzaSyAY0UUup62U68r2Hv1mS6ffX4ZjSmvcOqQ",
+  authDomain: "kacem-b.firebaseapp.com",
+  projectId: "kacem-b",
+  storageBucket: "kacem-b.firebasestorage.app",
+  messagingSenderId: "25625777376",
+  appId: "1:25625777376:web:3fa483d33191faaeb86c85"
 };
 
 const app = initializeApp(firebaseConfig);
